@@ -1,0 +1,166 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+
+\usetheme{metropolis}
+\metroset{progressbar=frametitle}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{bgcode}{RGB}{248,248,242}
+\definecolor{kwcode}{RGB}{36,82,160}
+\definecolor{strcode}{RGB}{120,40,140}
+\definecolor{cmtcode}{RGB}{60,120,60}
+\definecolor{numcode}{RGB}{130,130,130}
+\definecolor{bgterm}{RGB}{30,30,30}
+\definecolor{fgterm}{RGB}{230,230,230}
+
+\lstdefinestyle{cstyle}{
+    language=C,
+    backgroundcolor=\color{bgcode},
+    commentstyle=\color{cmtcode}\itshape,
+    keywordstyle=\color{kwcode}\bfseries,
+    numberstyle=\tiny\color{numcode},
+    stringstyle=\color{strcode},
+    basicstyle=\ttfamily\scriptsize,
+    breaklines=true,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showstringspaces=false,
+    tabsize=4,
+    frame=single,
+    framerule=0pt,
+    morekeywords={uint8_t,uint32_t,size_t,__ESBMC_assert}
+}
+
+\lstdefinestyle{outstyle}{
+    backgroundcolor=\color{bgterm},
+    basicstyle=\ttfamily\tiny\color{fgterm},
+    breaklines=true,
+    keepspaces=true,
+    showstringspaces=false,
+    tabsize=4,
+    frame=single,
+    framerule=0pt
+}
+
+\title{Operational Models para Verifica\c{c}\~ao de Brokers MQTT com ESBMC}
+\subtitle{Apresenta\c{c}\~ao inicial}
+\author{Autor \emph{placeholder}}
+\institute{Orientador: \emph{placeholder}}
+\date{Maio de 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{frame}{Ideia central}
+    \Large
+    Queremos usar \textbf{verifica\c{c}\~ao formal} para encontrar vulnerabilidades em programas C usados em IoT.
+
+    \vspace{1em}
+    \normalsize
+    O caso escolhido \'{e} o \textbf{Eclipse Mosquitto}, um broker MQTT escrito em C.
+
+    \vspace{0.8em}
+    \begin{block}{Tese do trabalho}
+        Estender o ESBMC com \emph{operational models} para APIs de rede e concorr\^encia, permitindo verificar software MQTT real.
+    \end{block}
+\end{frame}
+
+\begin{frame}{Por que Mosquitto e MQTT?}
+    \begin{itemize}
+        \item MQTT \'{e} um protocolo leve muito usado em Internet das Coisas.
+        \item O broker \'{e} o ponto central: recebe, roteia e entrega mensagens.
+        \item O Mosquitto \'{e} open source, amplamente usado e escrito em C.
+        \item Bugs no broker podem afetar toda a rede de dispositivos.
+    \end{itemize}
+
+    \vspace{0.8em}
+    \alert{Esse contexto junta seguran\c{c}a, C, IoT e verifica\c{c}\~ao formal em um problema real.}
+\end{frame}
+
+\begin{frame}{Problema}
+    O ESBMC j\'a verifica propriedades importantes em C:
+
+    \begin{itemize}
+        \item buffer overflow;
+        \item integer overflow;
+        \item null pointer dereference;
+        \item use-after-free;
+        \item memory leak.
+    \end{itemize}
+
+    \vspace{0.5em}
+    \textbf{Mas software de rede usa muitas APIs externas:}
+    \texttt{socket}, \texttt{accept}, \texttt{recv}, \texttt{send}, \texttt{select}, \texttt{poll}, \texttt{pthread}.
+
+    \vspace{0.5em}
+    \alert{Sem modelos adequados dessas APIs, a verifica\c{c}\~ao de programas reais fica limitada.}
+\end{frame}
+
+\begin{frame}{O que s\~ao \emph{operational models}?}
+    \textbf{Operational model} \'{e} uma implementa\c{c}\~ao abstrata de uma fun\c{c}\~ao externa.
+
+    \vspace{0.6em}
+    Em vez de verificar a implementa\c{c}\~ao real do sistema operacional, o ESBMC usa um modelo menor e controlado.
+
+    \vspace{0.8em}
+    \begin{exampleblock}{Exemplo}
+        Um modelo de \texttt{recv()} pode dizer: ``o buffer recebe at\'e \texttt{len} bytes n\~ao determin\'isticos''.
+    \end{exampleblock}
+
+    \vspace{0.6em}
+    Isso preserva o comportamento relevante para seguran\c{c}a sem explodir o espa\c{c}o de estados.
+\end{frame}
+
+\begin{frame}{Pergunta de pesquisa}
+    \begin{block}{Pergunta}
+        Como estender o ESBMC com \emph{operational models} para APIs de rede e concorr\^encia, de forma a detectar vulnerabilidades em brokers MQTT escritos em C?
+    \end{block}
+
+    \vspace{0.8em}
+    \textbf{Objetivo geral}
+
+    Desenvolver e avaliar modelos operacionais para permitir a an\'alise formal do Mosquitto com ESBMC.
+\end{frame}
+
+\begin{frame}[fragile]{Exemplo: parser do \emph{Remaining Length}}
+    O campo \emph{Remaining Length} do MQTT usa codifica\c{c}\~ao vari\'avel. Um parser incorreto pode sofrer overflow aritm\'etico.
+
+    \vspace{0.3em}
+    \lstinputlisting[style=cstyle,firstline=6,lastline=18]{code/mqtt_bof_example.c}
+\end{frame}
+
+\begin{frame}[fragile]{Execu\c{c}\~ao real do ESBMC}
+    Comando usado:
+
+    \begin{lstlisting}[style=outstyle]
+esbmc slides\code\mqtt_bof_example.c --unwind 8 --no-unwinding-assertions --unsigned-overflow-check
+    \end{lstlisting}
+
+    \vspace{0.3em}
+    \lstinputlisting[style=outstyle,firstline=23,lastline=35]{code/esbmc_output.txt}
+\end{frame}
+
+\begin{frame}{Contribui\c{c}\~ao esperada}
+    \begin{itemize}
+        \item Mapear quais APIs externas impedem a verifica\c{c}\~ao direta do Mosquitto.
+        \item Criar modelos operacionais para APIs de rede e concorr\^encia.
+        \item Comparar ESBMC original versus ESBMC com os novos modelos.
+        \item Reproduzir CVEs hist\'oricos do Mosquitto como estudo de caso.
+    \end{itemize}
+
+    \vspace{0.6em}
+    \alert{A contribui\c{c}\~ao n\~ao \'{e} criar outro analisador, mas tornar o ESBMC mais aplic\'avel a software de rede real.}
+\end{frame}
+
+\begin{frame}[standout]
+    Obrigado.
+\end{frame}
+
+\end{document}

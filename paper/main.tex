@@ -1,0 +1,108 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{url}
+
+\renewcommand{\IEEEkeywordsname}{Palavras-chave}
+
+\begin{document}
+
+\title{Operational Models para Verifica\c{c}\~ao\\
+de Brokers MQTT com ESBMC\\
+\thanks{T\'itulo de trabalho. Pode ser ajustado ap\'os a defini\c{c}\~ao final do escopo.}}
+
+\author{\IEEEauthorblockN{Autor Placeholder}
+\IEEEauthorblockA{\textit{Departamento} \\
+\textit{Institui\c{c}\~ao}\\
+Cidade, Pa\'is \\
+email@exemplo.org}
+}
+
+\maketitle
+
+\begin{abstract}
+A crescente ado\c{c}\~ao da Internet das Coisas (IoT) tem ampliado a superf\'icie de ataque de sistemas cr\'iticos, muitos dos quais s\~ao escritos em C devido a requisitos de desempenho e recursos limitados. Brokers do protocolo MQTT s\~ao componentes centrais nesses ecossistemas e seu comprometimento pode afetar redes inteiras de dispositivos. Este trabalho prop\~oe a extens\~ao do verificador \emph{Efficient SMT-Based Context-Bounded Model Checker} (ESBMC) por meio do desenvolvimento de \emph{operational models} para APIs de rede e concorr\^encia, com o objetivo de habilitar a an\'alise formal de brokers MQTT escritos em C. O Eclipse Mosquitto \'e adotado como estudo de caso, e a avalia\c{c}\~ao se baseia na reprodu\c{c}\~ao de \emph{Common Vulnerabilities and Exposures} (CVEs) hist\'oricos do projeto, al\'em de \emph{benchmarks} cient\'ificos consolidados (Juliet Test Suite e SV-COMP).
+\end{abstract}
+
+\begin{IEEEkeywords}
+verifica\c{c}\~ao formal, model checking, ESBMC, MQTT, Mosquitto, IoT, seguran\c{c}a de software, vulnerabilidades em C, operational models.
+\end{IEEEkeywords}
+
+\section{Introdu\c{c}\~ao}
+
+\subsection{Contexto}
+\label{sec:contexto}
+
+A Internet das Coisas (IoT) deixou de ser uma promessa tecnol\'ogica para se consolidar como infraestrutura cotidiana, abrangendo desde aplica\c{c}\~oes de consumo at\'e ambientes industriais e governamentais~\cite{statista_iot_2024}. Estima-se que o n\'umero de dispositivos conectados ultrapasse a casa das dezenas de bilh\~oes nos pr\'oximos anos, o que torna a comunica\c{c}\~ao entre esses dispositivos um problema de escala mundial.
+
+Nesse contexto, o protocolo \emph{Message Queuing Telemetry Transport} (MQTT) tornou-se o padr\~ao de fato para troca de mensagens em ambientes de IoT, sobretudo pela sua leveza e por seu modelo de publica\c{c}\~ao/assinatura~\cite{mqtt_v5_spec}. O elemento central de uma rede MQTT \'e o \emph{broker}, respons\'avel por receber, rotear e entregar mensagens aos clientes inscritos. Entre as implementa\c{c}\~oes existentes, o \emph{Eclipse Mosquitto}~\cite{mosquitto} \'e um dos brokers mais utilizados, mantido pela Eclipse Foundation e escrito em linguagem C.
+
+A linguagem C, por sua vez, permanece dominante no desenvolvimento de software de sistemas e embarcado~\cite{tiobe_index}, oferecendo controle fino sobre mem\'oria e desempenho previs\'ivel, caracter\'isticas indispens\'aveis em dispositivos com recursos restritos. Esse mesmo controle, contudo, transfere para o desenvolvedor a responsabilidade pelo gerenciamento de mem\'oria e pela aus\^encia de comportamentos indefinidos, o que historicamente tem se mostrado uma fonte recorrente de vulnerabilidades.
+
+A verifica\c{c}\~ao formal surge como uma t\'ecnica capaz de oferecer garantias matem\'aticas sobre o comportamento de um programa, complementando t\'ecnicas tradicionais como testes e an\'alise est\'atica~\cite{clarke2018handbook}. Em particular, o \emph{Efficient SMT-Based Context-Bounded Model Checker} (ESBMC)~\cite{cordeiro2012tse,gadelha2017sttt} \'e uma ferramenta de \emph{Bounded Model Checking} (BMC) que verifica programas C/C++ explorando seus caminhos at\'e um limite finito de execu\c{c}\~ao, traduzindo a obriga\c{c}\~ao de seguran\c{c}a para uma f\'ormula em l\'ogica SMT a ser decidida por um \emph{solver}.
+
+\subsection{Problema}
+\label{sec:problema}
+
+Apesar dos avan\c{c}os recentes em verifica\c{c}\~ao formal, a aplica\c{c}\~ao direta do ESBMC a software de rede escrito em C, como brokers MQTT, esbarra em limita\c{c}\~oes pr\'aticas. A principal delas \'e a aus\^encia de \emph{operational models} adequados para APIs externas amplamente utilizadas nesse dom\'inio, especialmente as APIs de sockets POSIX (\texttt{socket}, \texttt{bind}, \texttt{listen}, \texttt{accept}, \texttt{connect}, \texttt{send}, \texttt{recv}), as APIs de multiplexa\c{c}\~ao de entrada e sa\'ida (\texttt{select}, \texttt{poll}, \texttt{epoll}) e parte significativa das primitivas de concorr\^encia da \texttt{pthread}.
+
+Sem modelos abstratos para essas APIs, o ESBMC ou aborta a verifica\c{c}\~ao por aus\^encia de defini\c{c}\~ao de s\'imbolo, ou tenta seguir a implementa\c{c}\~ao real do sistema operacional, o que rapidamente torna a explora\c{c}\~ao do espa\c{c}o de estados invi\'avel em termos de tempo e mem\'oria. O resultado pr\'atico \'e que uma classe inteira de software de infraestrutura, que inclui brokers, servidores e \emph{daemons} de rede, permanece fora do alcance da verifica\c{c}\~ao formal automatizada pelo ESBMC.
+
+Esse panorama \'e particularmente cr\'itico no contexto de IoT, em que vulnerabilidades em componentes de comunica\c{c}\~ao se propagam para milh\~oes de dispositivos. O hist\'orico recente do pr\'oprio Mosquitto registra \emph{Common Vulnerabilities and Exposures} (CVEs) relacionados ao parser de pacotes MQTT, como o \emph{integer overflow} no campo \emph{Remaining Length} (CVE-2017-7651~\cite{cve_2017_7651}), \emph{off-by-one} em rotinas de parsing de credenciais (CVE-2018-12551~\cite{cve_2018_12551}) e vazamentos de mem\'oria no fluxo de conex\~ao (CVE-2017-7654~\cite{cve_2017_7654}). Tais vulnerabilidades poderiam, em princ\'ipio, ser detectadas por verifica\c{c}\~ao formal, n\~ao fosse a barreira de modelagem mencionada.
+
+O problema central abordado por este trabalho \'e, portanto:
+
+\begin{quote}
+\emph{Como estender o ESBMC, por meio de \emph{operational models} para APIs de rede e concorr\^encia, de modo a permitir a detec\c{c}\~ao automatizada de vulnerabilidades de mem\'oria em brokers MQTT escritos em C, com custo computacional vi\'avel e taxa de falsos positivos aceit\'avel?}
+\end{quote}
+
+\subsection{Motiva\c{c}\~ao e Justificativa}
+\label{sec:motivacao}
+
+A justificativa para investir em verifica\c{c}\~ao formal de brokers MQTT articula-se em tr\^es eixos complementares.
+
+\textbf{Eixo de impacto.} Brokers MQTT s\~ao pontos \'unicos de falha em arquiteturas IoT t\'ipicas. O comprometimento de um broker permite, em geral, interceptar, alterar ou injetar mensagens em toda a rede de dispositivos conectados. Detectar vulnerabilidades antes do \emph{deploy}, em vez de reagir a explora\c{c}\~oes ap\'os a divulga\c{c}\~ao p\'ublica, reduz substancialmente o custo e o risco associados \`a opera\c{c}\~ao desses sistemas.
+
+\textbf{Eixo cient\'ifico.} \emph{Operational models} s\~ao um recurso bem estabelecido em verifica\c{c}\~ao formal para abstrair comportamentos externos a fim de tornar a an\'alise tratavel~\cite{heitmeyer1996}. Apesar disso, o cat\'alogo de modelos efetivamente dispon\'ivel no ESBMC para APIs de rede e concorr\^encia ainda \'e incompleto, especialmente para opera\c{c}\~oes ass\'incronas e multiplexa\c{c}\~ao. Preencher essa lacuna n\~ao beneficia apenas a an\'alise de brokers MQTT, mas habilita o ESBMC a tratar toda uma classe de software de rede com a mesma metodologia.
+
+\textbf{Eixo pr\'atico e de reprodutibilidade.} Diferentemente de modificar o n\'ucleo em C++ do ESBMC, o desenvolvimento de \emph{operational models} ocorre em arquivos C dentro do diret\'orio \texttt{src/c2goto/library/} do projeto, com curva de aprendizado e risco de regress\~ao menores. A contribui\c{c}\~ao resultante pode ser submetida ao reposit\'orio oficial do ESBMC como \emph{patch}, beneficiando a comunidade. Al\'em disso, ao adotar o Eclipse Mosquitto, que \'e \emph{open source} e amplamente documentado, garante-se a reprodutibilidade do estudo experimental por outros pesquisadores.
+
+A combina\c{c}\~ao desses tr\^es eixos torna o problema escolhido relevante tanto do ponto de vista da seguran\c{c}a aplicada quanto do ponto de vista da pesquisa em verifica\c{c}\~ao formal.
+
+\subsection{Objetivos}
+\label{sec:objetivos}
+
+\subsubsection{Objetivo Geral}
+
+Desenvolver e avaliar uma extens\~ao do ESBMC, baseada em \emph{operational models} para APIs de rede e concorr\^encia, com o intuito de habilitar a detec\c{c}\~ao automatizada de vulnerabilidades de mem\'oria em brokers MQTT escritos em linguagem C, utilizando o Eclipse Mosquitto como estudo de caso.
+
+\subsubsection{Objetivos Espec\'ificos}
+
+\begin{enumerate}
+    \item Identificar, a partir do c\'odigo-fonte do Mosquitto e de execu\c{c}\~oes preliminares do ESBMC, o conjunto m\'inimo de APIs externas cuja aus\^encia de modelagem impede ou inviabiliza a verifica\c{c}\~ao do broker.
+
+    \item Projetar e implementar \emph{operational models} para essas APIs no diret\'orio de biblioteca do ESBMC, observando o equil\'ibrio entre abstra\c{c}\~ao suficiente para garantir verificabilidade e precis\~ao suficiente para evitar falsos positivos.
+
+    \item Construir \emph{harnesses} de verifica\c{c}\~ao para subsistemas cr\'iticos do Mosquitto, em especial o parser do cabe\c{c}alho MQTT, a leitura do campo \emph{Remaining Length} e o tratamento inicial do pacote \texttt{CONNECT}.
+
+    \item Estabelecer uma linha de base cient\'ifica utilizando \emph{benchmarks} consolidados, especificamente um subconjunto da \emph{Juliet Test Suite} (CWE-121, CWE-122, CWE-416 e CWE-476) e do reposit\'orio do SV-COMP nas categorias \emph{ReachSafety} e \emph{MemSafety}.
+
+    \item Reproduzir, com o ESBMC modificado, CVEs hist\'oricos selecionados do Mosquitto, mensurando a taxa de detec\c{c}\~ao em compara\c{c}\~ao com o ESBMC \emph{vanilla}.
+
+    \item Avaliar quantitativamente o impacto da extens\~ao proposta em termos de tempo de verifica\c{c}\~ao, consumo de mem\'oria, taxa de \emph{timeouts}, taxa de detec\c{c}\~ao verdadeira (\emph{true positives}) e taxa de falsos positivos.
+
+    \item Documentar diretrizes pr\'aticas para o desenvolvimento e a manuten\c{c}\~ao de novos \emph{operational models} no ESBMC, de modo a facilitar contribui\c{c}\~oes futuras da comunidade.
+\end{enumerate}
+
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

@@ -1,0 +1,35 @@
+Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+Parsing slides\code\mqtt_bof_example.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.413s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Unwinding loop 3 iteration 1   file slides\code\mqtt_bof_example.c line 18 column 14 function read_remaining_length
+Unwinding loop 3 iteration 2   file slides\code\mqtt_bof_example.c line 18 column 14 function read_remaining_length
+Unwinding loop 3 iteration 3   file slides\code\mqtt_bof_example.c line 18 column 14 function read_remaining_length
+Unwinding loop 3 iteration 4   file slides\code\mqtt_bof_example.c line 18 column 14 function read_remaining_length
+Symex completed in: 0.000s (74 assignments)
+Caching time: 0.000s (removed 1 assertions)
+Slicing time: 0.000s (removed 50 assignments)
+Generated 33 VCC(s), 22 remaining after simplification (23 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.000s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.000s
+Building error trace
+
+[Counterexample]
+
+
+State 19 file slides\code\mqtt_bof_example.c line 16 column 9 function read_remaining_length thread 0
+----------------------------------------------------
+Violated property:
+  file slides\code\mqtt_bof_example.c line 16 column 9 function read_remaining_length
+  arithmetic overflow on mul
+  !overflow("*", (unsigned int)((signed int)byte & 127), multiplier)
+
+
+VERIFICATION FAILED
+ESBMC version 8.2.0 64-bit x86_64 windows
