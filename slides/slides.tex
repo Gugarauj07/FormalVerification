@@ -50,8 +50,7 @@
 
 \title{Operational Models para Verifica\c{c}\~ao de Brokers MQTT com ESBMC}
 \subtitle{Apresenta\c{c}\~ao inicial}
-\author{Autor \emph{placeholder}}
-\institute{Orientador: \emph{placeholder}}
+\author{Gustavo Lima \and Willian Jean \and Paulo Gomes}
 \date{Maio de 2026}
 
 \begin{document}
@@ -68,7 +67,7 @@
 
     \vspace{0.8em}
     \begin{block}{Tese do trabalho}
-        Estender o ESBMC com \emph{operational models} para APIs de rede e concorr\^encia, permitindo verificar software MQTT real.
+        Investigar a extens\~ao do ESBMC com \emph{operational models} para APIs de rede, permitindo verificar m\'odulos de software MQTT real.
     \end{block}
 \end{frame}
 
@@ -97,7 +96,7 @@
 
     \vspace{0.5em}
     \textbf{Mas software de rede usa muitas APIs externas:}
-    \texttt{socket}, \texttt{accept}, \texttt{recv}, \texttt{send}, \texttt{select}, \texttt{poll}, \texttt{pthread}.
+    \texttt{socket}, \texttt{accept}, \texttt{recv}, \texttt{send}, \texttt{select}, \texttt{poll}.
 
     \vspace{0.5em}
     \alert{Sem modelos adequados dessas APIs, a verifica\c{c}\~ao de programas reais fica limitada.}
@@ -120,13 +119,34 @@
 
 \begin{frame}{Pergunta de pesquisa}
     \begin{block}{Pergunta}
-        Como estender o ESBMC com \emph{operational models} para APIs de rede e concorr\^encia, de forma a detectar vulnerabilidades em brokers MQTT escritos em C?
+        Como estender o ESBMC com \emph{operational models} para APIs de rede, de forma a detectar vulnerabilidades em m\'odulos de brokers MQTT escritos em C?
     \end{block}
 
     \vspace{0.8em}
     \textbf{Objetivo geral}
 
-    Desenvolver e avaliar modelos operacionais para permitir a an\'alise formal do Mosquitto com ESBMC.
+    Investigar e avaliar modelos operacionais que permitam a an\'alise formal de m\'odulos do Mosquitto com ESBMC.
+\end{frame}
+
+\begin{frame}{Objetivos e metodologia}
+    \textbf{Resultados esperados:}
+    \begin{itemize}
+        \item Cat\'alogo das APIs que bloqueiam a verifica\c{c}\~ao direta do Mosquitto.
+        \item Conjunto de \emph{operational models} para APIs de rede (\texttt{socket}, \texttt{recv}, \texttt{send}, \texttt{select}).
+        \item Avalia\c{c}\~ao comparativa: ESBMC sem modelos vs.\ ESBMC com modelos.
+        \item Estudo de caso sobre a viabilidade de reproduzir CVEs hist\'oricos do Mosquitto.
+    \end{itemize}
+
+    \vspace{0.8em}
+    \textbf{Abordagem:}
+
+    \medskip
+    \small
+    An\'alise do c\'odigo-fonte
+    $\;\rightarrow\;$ Sele\c{c}\~ao de APIs
+    $\;\rightarrow\;$ Implementa\c{c}\~ao incremental
+    $\;\rightarrow\;$ Valida\c{c}\~ao comparativa
+    $\;\rightarrow\;$ Estudo de caso
 \end{frame}
 
 \begin{frame}[fragile]{Exemplo: parser do \emph{Remaining Length}}
@@ -150,9 +170,9 @@ esbmc slides\code\mqtt_bof_example.c --unwind 8 --no-unwinding-assertions --unsi
 \begin{frame}{Contribui\c{c}\~ao esperada}
     \begin{itemize}
         \item Mapear quais APIs externas impedem a verifica\c{c}\~ao direta do Mosquitto.
-        \item Criar modelos operacionais para APIs de rede e concorr\^encia.
+        \item Propor modelos operacionais para um subconjunto de APIs de rede.
         \item Comparar ESBMC original versus ESBMC com os novos modelos.
-        \item Reproduzir CVEs hist\'oricos do Mosquitto como estudo de caso.
+        \item Investigar a viabilidade de reproduzir CVEs hist\'oricos como estudo de caso.
     \end{itemize}
 
     \vspace{0.6em}

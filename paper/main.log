@@ -1,7 +1,6 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.5.11)  11 MAY 2026 16:41
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.2) (preloaded format=pdflatex 2026.5.11)  17 MAY 2026 23:25
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
 **./main.tex
 (main.tex
@@ -342,7 +341,7 @@ File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
 \l__color_backend_stack_int=\count304
 ) (main.aux
 Package babel Info: 'brazilian' activates 'portuges' shorthands.
-(babel)             Reported on input line 14.
+(babel)             Reported on input line 8.
 )
 \openout1 = `main.aux'.
 
@@ -388,35 +387,34 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
 f-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 55
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 56
 .
 
 (C:\Users\gustavo.lima\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
-) [1{C:/Users/gustavo.lima/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:
-/Users/gustavo.lima/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
+)
+Underfull \hbox (badness 2285) in paragraph at lines 87--88
+[]\T1/ptm/m/n/10 Reproduzir CVEs his-tó-ri-cos do Mos-quitto com o
+ []
+
+[1{C:/Users/gustavo.lima/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/U
+sers/gustavo.lima/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
 ]
 (main.bbl
-LaTeX Font Info:    Trying to load font information for U+msa on input line 27.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 26.
 
 
 (C:\Users\gustavo.lima\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 27.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 26.
 
 
 (C:\Users\gustavo.lima\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-Underfull \hbox (badness 4291) in paragraph at lines 31--34
-[]\T1/ptm/m/n/8 OASIS, ``MQTT Ver-sion 5.0 -- OA-SIS Stan-dard,'' $https : / / 
-docs .
- []
-
-)
+))
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -428,27 +426,29 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[2] (main.aux)
+[2
+
+] (main.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-03-20>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 5567 strings out of 467690
- 90051 string characters out of 5411577
- 525970 words of memory out of 5000000
- 34557 multiletter control sequences out of 15000+600000
- 734429 words of font info for 147 fonts, out of 8000000 for 9000
+ 5555 strings out of 467690
+ 89843 string characters out of 5411577
+ 520944 words of memory out of 5000000
+ 34546 multiletter control sequences out of 15000+600000
+ 733322 words of font info for 146 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 57i,8n,65p,933b,379s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 57i,8n,65p,744b,379s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/gustavo.lima/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/
 ucrr8a.pfb><C:/Users/gustavo.lima/AppData/Local/Programs/MiKTeX/fonts/type1/urw
 /times/utmb8a.pfb><C:/Users/gustavo.lima/AppData/Local/Programs/MiKTeX/fonts/ty
 pe1/urw/times/utmbi8a.pfb><C:/Users/gustavo.lima/AppData/Local/Programs/MiKTeX/
 fonts/type1/urw/times/utmr8a.pfb><C:/Users/gustavo.lima/AppData/Local/Programs/
 MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (2 pages, 92903 bytes).
+Output written on main.pdf (2 pages, 85258 bytes).
 PDF statistics:
  35 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
