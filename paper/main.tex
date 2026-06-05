@@ -84,10 +84,95 @@ Desenvolver \emph{operational models} para APIs de rede no ESBMC e avaliar sua e
 
     \item Construir \emph{harnesses} de verifica\c{c}\~ao para subsistemas cr\'iticos do Mosquitto, incluindo o parser MQTT e o tratamento do pacote \texttt{CONNECT}.
 
-    \item Reproduzir CVEs hist\'oricos do Mosquitto com o ESBMC estendido e comparar os resultados com o ESBMC \emph{vanilla}.
+    \item Reproduzir CVEs hist\'oricos e recentes do Mosquitto com o ESBMC e comparar vers\~oes vulner\'aveis e corrigidas.
 
     \item Avaliar o impacto da extens\~ao em termos de tempo de verifica\c{c}\~ao, consumo de mem\'oria e taxa de detec\c{c}\~ao.
 \end{enumerate}
+
+\section{Metodologia}
+\label{sec:metodologia}
+
+A verifica\c{c}\~ao segue o padr\~ao de \emph{harnesses} isolados: trechos do c\'odigo Mosquitto (vers\~ao vulner\'avel ou corrigida) s\~ao copiados para arquivos C independentes, com estruturas reduzidas e entradas simb\'olicas (\texttt{\_\_VERIFIER\_nondet\_*}) ou pacotes concretos que disparam o defeito.
+
+Para cada CVE, define-se uma propriedade de seguran\c{c}a expressa em \texttt{\_\_ESBMC\_assert} ou verificada por recursos nativos do ESBMC (\texttt{--unsigned-overflow-check}, \texttt{--memory-leak-check}, checagem de limites de \emph{array}). O ESBMC~8.3 executa \emph{bounded model checking} com limite de desenrolamento (\texttt{--unwind}).
+
+As APIs de rede do broker completo n\~ao s\~ao verificadas de ponta a ponta nesta fase; o foco s\~ao subsistemas de parsing, ACL, propriedades MQTT~v5 e l\'ogica de ponteiros (bridge). Um cat\'alogo de APIs externas e \emph{stubs} m\'inimos est\~ao em \texttt{docs/api\_catalog.md} e \texttt{esbmc\_models/network\_stubs.c}.
+
+\section{Cat\'alogo de CVEs do broker Mosquitto}
+\label{sec:cves}
+
+A Tabela~\ref{tab:cves} resume CVEs reproduzidos ou modelados. Vers\~oes atuais (2.1.x) incorporam as corre\c{c}\~oes de 2.0.16 e 2.0.19; n\~ao h\'a CVE p\'ublico novo listado para 2.1.x no ChangeLog oficial.
+
+\begin{table}[htbp]
+\caption{CVEs do broker Mosquitto usados como or\'aculo de valida\c{c}\~ao}
+\label{tab:cves}
+\centering
+\begin{tabular}{llll}
+\hline
+CVE & Tipo & Corrigido em & Harness \\
+\hline
+2017-7651 & integer overflow & 1.4.15 & \texttt{remaining\_length} \\
+2017-7654 & memory leak & 1.4.15 & \texttt{connect\_memleak} \\
+2017-7650 & ACL bypass & 1.4.12 & \texttt{acl\_bypass} \\
+2023-3592 & memory leak & 2.0.16 & \texttt{will\_properties} \\
+2023-0809 & estado/protocolo & 2.0.16 & \texttt{initial\_packet} \\
+2023-28366 & memory leak QoS2 & 2.0.16 & \texttt{qos2\_dup} \\
+2024-3935 & double free & 2.0.19 & \texttt{bridge\_remap} \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Resultados}
+\label{sec:resultados}
+
+A Tabela~\ref{tab:results} resume execu\c{c}\~oes com ESBMC~8.3 (logs em \texttt{harnesses/mosquitto/*.log}). \textbf{FAILED} na vers\~ao vulner\'avel indica que a propriedade de seguran\c{c}a foi violada (detec\c{c}\~ao desejada). \textbf{SUCCESSFUL} na vers\~ao corrigida ou em propriedades do c\'odigo 2.1.x indica conformidade no limite de desenrolamento.
+
+\begin{table}[htbp]
+\caption{Resultados ESBMC nos harnesses (broker Mosquitto)}
+\label{tab:results}
+\centering
+\scriptsize
+\begin{tabular}{lll}
+\hline
+Harness & Flags principais & Resultado \\
+\hline
+\texttt{remaining\_length} (vuln.) & \texttt{--unsigned-overflow-check} & FAILED \\
+\texttt{connect\_memleak} (vuln.) & \texttt{--memory-leak-check} & FAILED (CWE-401) \\
+\texttt{read\_binary\_obo} (vuln.) & limites de \emph{array} & FAILED (CWE-193) \\
+\texttt{acl\_bypass} (v1.4.10) & \texttt{--unwind 32} & FAILED \\
+\texttt{acl\_bypass\_fixed} & \texttt{--unwind 32} & SUCCESSFUL \\
+\texttt{will\_properties} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
+\texttt{will\_properties\_fixed} & \texttt{--memory-leak-check} & SUCCESSFUL \\
+\texttt{initial\_packet} (vuln.) & --- & FAILED \\
+\texttt{initial\_packet\_fixed} & --- & SUCCESSFUL \\
+\texttt{qos2\_dup} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
+\texttt{qos2\_dup\_fixed} & \texttt{--unwind 8} & SUCCESSFUL \\
+\texttt{bridge\_remap} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
+\texttt{bridge\_remap\_fixed} & \texttt{--unwind 16} & SUCCESSFUL \\
+\texttt{varint\_harness} / \texttt{max\_packet\_size} & \texttt{--unwind 8} & SUCCESSFUL \\
+\texttt{packet\_recv\_remaining\_length} (vuln.) & \texttt{network\_stubs.c} & FAILED \\
+\texttt{packet\_recv\_remaining\_length\_fixed} & \texttt{network\_stubs.c} & SUCCESSFUL \\
+\texttt{packet\_recv\_initial\_command} (vuln.) & \texttt{network\_stubs.c} & FAILED \\
+\texttt{packet\_recv\_initial\_command\_fixed} & \texttt{network\_stubs.c} & SUCCESSFUL \\
+\hline
+\end{tabular}
+\end{table}
+
+Os quatro \emph{harnesses} de integra\c{c}\~ao (\texttt{packet\_recv\_*}) leem bytes via \texttt{recv()} usando o \emph{operational model} em \texttt{esbmc\_models/network\_stubs.c}, demonstrando detec\c{c}\~ao de CVE-2017-7651 e CVE-2023-0809 no fluxo de rede simb\'olica, n\~ao apenas com buffers fixos em mem\'oria.
+
+O parser \texttt{packet\_\_read\_varint} do ramo 2.1.x satisfaz limites de \emph{Remaining Length} (m\'aximo quatro bytes e valor $\leq 2^{28}-1$), alinhado \`a especifica\c{c}\~ao MQTT~\cite{mqtt_v5_spec}.
+
+\section{Limita\c{c}\~oes e trabalho futuro}
+\label{sec:limitacoes}
+
+A an\'alise \'e \emph{context-bounded}: o desenrolamento limita loops e pode omitir caminhos mais profundos. CVEs que envolvem sequ\^encias longas de pacotes (ex.: CVE-2024-8376) exigem modelagem de estado de sess\~ao e APIs \texttt{select}/\texttt{poll}, ainda n\~ao integradas ao broker completo.
+
+Foram implementados \emph{operational models} m\'inimos (\texttt{network\_stubs.c}) e quatro \emph{harnesses} de integra\c{c}\~ao com \texttt{recv}. O pr\'oximo passo \'e incorporar modelos completos (\texttt{socket\_lib.c}) \`a biblioteca c2goto do ESBMC e verificar trechos reais de \texttt{packet\_mosq.c} do Mosquitto, medindo tempo e mem\'oria em rela\c{c}\~ao aos harnesses isolados.
+
+\section{Conclus\~ao}
+\label{sec:conclusao}
+
+Este trabalho demonstra que o ESBMC detecta padr\~oes de vulnerabilidades reais do Eclipse Mosquitto---incluindo CVEs de 2017 e de 2023--2024---em harnesses isolados e em harnesses de integra\c{c}\~ao com \texttt{recv}, e que c\'odigo recente do parser MQTT satisfaz propriedades de seguran\c{c}a verificadas. A extens\~ao com modelos POSIX completos no ESBMC permanece como passo para verifica\c{c}\~ao do broker completo.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
