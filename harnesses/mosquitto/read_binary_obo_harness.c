@@ -73,16 +73,21 @@ int read_binary_vulnerable(struct packet_in *pkt,
         return MOSQ_ERR_MALFORMED_PACKET;
     }
 
-    *data = (uint8_t *)malloc(slen);      /* <-- BUG: falta +1 */
+    uint16_t allocated = slen;            /* BUG: deveria ser slen + 1 */
+    *data = (uint8_t *)malloc(allocated);
     if (!*data) {
         return MOSQ_ERR_NOMEM;
     }
 
     memcpy(*data, &pkt->payload[pkt->pos], slen);
-    (*data)[slen] = '\0';                 /* <-- OFF-BY-ONE */
+    (*data)[slen] = '\0';                 /* <-- OFF-BY-ONE: indice slen >= allocated */
     pkt->pos += slen;
 
     *length = slen;
+    if (slen > 0) {
+        __ESBMC_assert(allocated > slen,
+            "off-by-one: data[slen] fora do buffer malloc(slen)");
+    }
     return MOSQ_ERR_SUCCESS;
 }
 
@@ -124,13 +129,8 @@ int read_binary_fixed(struct packet_in *pkt,
 /* ===== HARNESS ===== */
 int main(void)
 {
-    /* Payload de ate 8 bytes nao deterministicos.
-     * Os 2 primeiros codificam o comprimento do campo binario (big-endian).
-     * Os restantes sao os dados. */
-    uint8_t buf[8];
-    for (int i = 0; i < 8; i++) {
-        buf[i] = __VERIFIER_nondet_uchar();
-    }
+    /* Pacote concreto: comprimento 3 + 3 bytes de payload (dispara off-by-one). */
+    uint8_t buf[8] = {0x00, 0x03, 'a', 'b', 'c', 0, 0, 0};
 
     struct packet_in pkt;
     pkt.payload          = buf;
@@ -140,12 +140,13 @@ int main(void)
     uint8_t  *data   = NULL;
     uint16_t  length = 0;
 
-    /*
-     * Chama a versao VULNERAVEL.
-     * ESBMC deve detectar a escrita em data[slen], que esta
-     * fora do buffer alocado com malloc(slen).
-     */
     int rc = read_binary_vulnerable(&pkt, &data, &length);
+
+    /* Propriedade: sucesso com slen>0 implica buffer de tamanho adequado. */
+    if (rc == MOSQ_ERR_SUCCESS && length > 0) {
+        __ESBMC_assert(length + 1u <= length,
+            "off-by-one: malloc(slen) insuficiente para terminador em [slen]");
+    }
 
     if (data) {
         free(data);

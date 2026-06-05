@@ -96,12 +96,8 @@ int read_remaining_length_fixed(const uint8_t *buf, int buflen,
 /* ===== HARNESS ===== */
 int main(void)
 {
-    /* Pacote de ate 8 bytes nao deterministicos.
-     * 8 bytes eh suficiente para exercitar o overflow na 5a iteracao. */
-    uint8_t buf[8];
-    for (int i = 0; i < 8; i++) {
-        buf[i] = __VERIFIER_nondet_uchar();
-    }
+    /* Pacote concreto com 5 bytes de continuacao (overflow em remaining_mult). */
+    uint8_t buf[8] = {0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0, 0, 0};
 
     uint32_t length = 0;
     int      used   = 0;
