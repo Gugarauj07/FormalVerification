@@ -167,12 +167,44 @@ esbmc slides\code\mqtt_bof_example.c --unwind 8 --no-unwinding-assertions --unsi
     \lstinputlisting[style=outstyle,firstline=23,lastline=35]{code/esbmc_output.txt}
 \end{frame}
 
+\begin{frame}{CVEs reais recentes (2023--2024)}
+    \small
+    \begin{itemize}
+        \item \textbf{CVE-2023-3592}: \emph{memory leak} em CONNECT v5 (Will inv\'alido).
+        \item \textbf{CVE-2023-0809}: pacote inicial n\~ao-CONNECT $\rightarrow$ aloca\c{c}\~ao excessiva.
+        \item \textbf{CVE-2023-28366}: QoS~2 duplicado sem PUBREC $\rightarrow$ \emph{leak}.
+        \item \textbf{CVE-2024-3935}: \emph{double free} em bridge com \emph{topic remapping}.
+    \end{itemize}
+
+    \vspace{0.5em}
+    Vers\~ao atual (2.1.x): corre\c{c}\~oes aplicadas; usamos CVEs como or\'aculo, n\~ao como 0-day.
+\end{frame}
+
+\begin{frame}{Resultados com ESBMC (harnesses)}
+    \small
+    \begin{tabular}{lcc}
+        \toprule
+        Caso & Vulner\'avel & Corrigido / 2.1.x \\
+        \midrule
+        Remaining Length (2017) & FAILED & --- \\
+        CONNECT memleak (2017) & FAILED & --- \\
+        Will properties (2023) & FAILED & SUCCESSFUL \\
+        Primeiro pacote (2023) & FAILED & SUCCESSFUL \\
+        Bridge remap (2024) & FAILED & SUCCESSFUL \\
+        Varint / limites MQTT & --- & SUCCESSFUL \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.4em}
+    Harnesses e logs: \texttt{harnesses/mosquitto/}
+\end{frame}
+
 \begin{frame}{Contribui\c{c}\~ao esperada}
     \begin{itemize}
-        \item Mapear quais APIs externas impedem a verifica\c{c}\~ao direta do Mosquitto.
-        \item Propor modelos operacionais para um subconjunto de APIs de rede.
-        \item Comparar ESBMC original versus ESBMC com os novos modelos.
-        \item Investigar a viabilidade de reproduzir CVEs hist\'oricos como estudo de caso.
+        \item Cat\'alogo de APIs de rede + \emph{stubs} (\texttt{esbmc\_models/}).
+        \item Harnesses ESBMC para CVEs 2017 e 2023--2024.
+        \item Propriedades verificadas no parser MQTT (c\'odigo recente).
+        \item Pr\'oximo passo: integrar modelos \texttt{socket}/\texttt{recv}/\texttt{send} ao broker.
     \end{itemize}
 
     \vspace{0.6em}
