@@ -1,0 +1,76 @@
+﻿Command: esbmc harnesses\mosquitto\read_binary_obo_harness.c --unwind 8 --no-unwinding-assertions
+
+esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-4d261bdc-48d6-4837-b73f-70f877c3940e.ps1:106 char:3
++   & $ESBMC $j[1] $j[2] 2>&1 | Out-File $log -Append -Encoding utf8
++   ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Parsing harnesses\mosquitto\read_binary_obo_harness.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.394s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Unwinding loop 37 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Unwinding loop 37 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Not unwinding loop 37 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
+__memcpy_impl
+Symex completed in: 0.013s (177 assignments)
+Caching time: 0.000s (removed 1 assertions)
+Slicing time: 0.000s (removed 90 assignments)
+Generated 128 VCC(s), 40 remaining after simplification (86 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.000s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.030s
+Building error trace
+
+[Counterexample]
+
+
+State 1 file harnesses\mosquitto\read_binary_obo_harness.c line 135 column 5 function main thread 0
+----------------------------------------------------
+  pkt = { .payload=nondet_symbol(symex::nondet1).payload, .pos=0,
+    .remaining_length=0 }
+
+State 2 file harnesses\mosquitto\read_binary_obo_harness.c line 136 column 5 function main thread 0
+----------------------------------------------------
+  pkt.payload = { .payload=&buf[0], .pos=0, .remaining_length=0 }
+
+State 5 file harnesses\mosquitto\read_binary_obo_harness.c line 48 column 5 function read_uint16 thread 0
+----------------------------------------------------
+  *word = 3 (00000000 00000011)
+
+State 6 file harnesses\mosquitto\read_binary_obo_harness.c line 76 column 5 function read_binary_vulnerable thread 0
+----------------------------------------------------
+  allocated = 3 (00000000 00000011)
+
+State 7 file harnesses\mosquitto\read_binary_obo_harness.c line 77 column 5 function read_binary_vulnerable thread 0
+----------------------------------------------------
+  *data = &dynamic_1_array[0]
+
+State 21 file harnesses\mosquitto\read_binary_obo_harness.c line 83 column 5 function read_binary_vulnerable thread 0
+----------------------------------------------------
+Violated property:
+  file harnesses\mosquitto\read_binary_obo_harness.c line 83 column 5 function read_binary_vulnerable
+  dereference failure: array bounds violated
+  CWE: CWE-121, CWE-125, CWE-129, CWE-131, CWE-193, CWE-787
+
+
+VERIFICATION FAILED
+ESBMC version 8.3.0 64-bit x86_64 windows

@@ -1,0 +1,65 @@
+﻿Command: esbmc harnesses\mosquitto\bridge_remap_double_free_harness.c --unwind 16 --no-unwinding-assertions --memory-leak-check
+
+esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-4d261bdc-48d6-4837-b73f-70f877c3940e.ps1:106 char:3
++   & $ESBMC $j[1] $j[2] 2>&1 | Out-File $log -Append -Encoding utf8
++   ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Parsing harnesses\mosquitto\bridge_remap_double_free_harness.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.437s
+GOTO program processing time: 0.002s
+Starting Bounded Model Checking
+Unwinding loop 15 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 9   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 10   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 11   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Unwinding loop 15 iteration 12   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 33 column 3 function strcpy
+Symex completed in: 0.017s (151 assignments)
+Caching time: 0.001s (removed 5 assertions)
+Slicing time: 0.000s (removed 64 assignments)
+Generated 163 VCC(s), 47 remaining after simplification (82 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.002s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.028s
+Building error trace
+
+[Counterexample]
+
+
+State 1 file harnesses\mosquitto\bridge_remap_double_free_harness.c line 49 column 5 function main thread 0
+----------------------------------------------------
+  topic = &dynamic_1_array[0]
+
+State 43 file harnesses\mosquitto\bridge_remap_double_free_harness.c line 53 column 5 function main thread 0
+----------------------------------------------------
+  alloc_fails = 1 (00000000 00000000 00000000 00000001)
+
+State 46 file harnesses\mosquitto\bridge_remap_double_free_harness.c line 40 column 5 function 
+bridge_handle_error_vulnerable thread 0
+----------------------------------------------------
+  rc = 1 (00000000 00000000 00000000 00000001)
+
+State 48 file harnesses\mosquitto\bridge_remap_double_free_harness.c line 42 column 9 function 
+bridge_handle_error_vulnerable thread 0
+----------------------------------------------------
+Violated property:
+  file harnesses\mosquitto\bridge_remap_double_free_harness.c line 42 column 9 function bridge_handle_error_vulnerable
+  dereference failure: invalidated dynamic object freed
+  CWE: CWE-415, CWE-416, CWE-590, CWE-761, CWE-825
+
+
+VERIFICATION FAILED
+ESBMC version 8.3.0 64-bit x86_64 windows

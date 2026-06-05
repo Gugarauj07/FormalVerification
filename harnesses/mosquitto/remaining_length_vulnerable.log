@@ -1,0 +1,52 @@
+﻿Command: esbmc remaining_length_harness.c --unwind 8 --unsigned-overflow-check
+
+Command: esbmc harnesses/mosquitto/remaining_length_harness.c --unwind 8 --no-unwinding-assertions --unsigned-overflow-check
+
+esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-5292a096-02ee-4e65-ac07-f43675ff5db0.ps1:88 char:1
++ & $ESBMC harnesses\mosquitto\remaining_length_harness.c --unwind 8 -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Parsing harnesses\mosquitto\remaining_length_harness.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.471s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Unwinding loop 15 iteration 1   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function 
+read_remaining_length_vulnerable
+Unwinding loop 15 iteration 2   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function 
+read_remaining_length_vulnerable
+Unwinding loop 15 iteration 3   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function 
+read_remaining_length_vulnerable
+Unwinding loop 15 iteration 4   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function 
+read_remaining_length_vulnerable
+Symex completed in: 0.016s (73 assignments)
+Caching time: 0.000s (removed 2 assertions)
+Slicing time: 0.000s (removed 48 assignments)
+Generated 40 VCC(s), 22 remaining after simplification (23 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.001s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.000s
+Building error trace
+
+[Counterexample]
+
+
+State 18 file harnesses\mosquitto\remaining_length_harness.c line 53 column 9 function 
+read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+Violated property:
+  file harnesses\mosquitto\remaining_length_harness.c line 53 column 9 function read_remaining_length_vulnerable
+  arithmetic overflow on mul
+  CWE: CWE-190, CWE-191
+  !overflow("*", (unsigned int)byte & 127, remaining_mult)
+
+
+VERIFICATION FAILED
+ESBMC version 8.3.0 64-bit x86_64 windows
+

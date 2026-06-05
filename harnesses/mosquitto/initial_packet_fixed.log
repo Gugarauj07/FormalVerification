@@ -1,0 +1,28 @@
+﻿Command: esbmc harnesses\mosquitto\initial_packet_state_harness_fixed.c --unwind 4
+
+esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-4d261bdc-48d6-4837-b73f-70f877c3940e.ps1:106 char:3
++   & $ESBMC $j[1] $j[2] 2>&1 | Out-File $log -Append -Encoding utf8
++   ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Parsing harnesses\mosquitto\initial_packet_state_harness_fixed.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.366s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Symex completed in: 0.001s (25 assignments)
+Caching time: 0.000s (removed 0 assertions)
+Slicing time: 0.000s (removed 15 assignments)
+Generated 1 VCC(s), 1 remaining after simplification (10 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.000s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.001s
+BMC program time: 0.007s
+
+VERIFICATION SUCCESSFUL
+ESBMC version 8.3.0 64-bit x86_64 windows
