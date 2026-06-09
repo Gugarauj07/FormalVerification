@@ -1,28 +1,22 @@
-﻿Command: esbmc harnesses\mosquitto\qos2_dup_leak_harness_fixed.c --unwind 8 --no-unwinding-assertions
+﻿Command: C:\Dev\Work\FormalVerification\tools\esbmc\bin\esbmc.exe harnesses\mosquitto\qos2_dup_leak_harness_fixed.c --unwind 8 --no-unwinding-assertions
 
-esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
-At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-4d261bdc-48d6-4837-b73f-70f877c3940e.ps1:106 char:3
-+   & $ESBMC $j[1] $j[2] 2>&1 | Out-File $log -Append -Encoding utf8
-+   ~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 
+ESBMC version 8.3.0 64-bit x86_64 windows
+Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\qos2_dup_leak_harness_fixed.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.743s
-GOTO program processing time: 0.004s
+GOTO program creation time: 0.379s
+GOTO program processing time: 0.000s
 Starting Bounded Model Checking
-Symex completed in: 0.130s (335 assignments)
-Caching time: 0.025s (removed 74 assertions)
-Slicing time: 0.003s (removed 50 assignments)
+Symex completed in: 0.060s (335 assignments)
+Caching time: 0.019s (removed 74 assertions)
+Slicing time: 0.005s (removed 50 assignments)
 Generated 203 VCC(s), 92 remaining after simplification (211 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.016s
+Encoding to solver time: 0.006s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 4.706s
-BMC program time: 4.889s
+Runtime decision procedure: 3.084s
+BMC program time: 3.194s
 
 VERIFICATION SUCCESSFUL
-ESBMC version 8.3.0 64-bit x86_64 windows

@@ -1,17 +1,12 @@
-﻿Command: esbmc harnesses\mosquitto\connect_memleak_harness.c --unwind 16 --no-unwinding-assertions --memory-leak-check
+﻿Command: C:\Dev\Work\FormalVerification\tools\esbmc\bin\esbmc.exe harnesses\mosquitto\connect_memleak_harness.c --unwind 16 --no-unwinding-assertions --memory-leak-check
 
-esbmc.exe : Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
-At C:\Users\gustavo.lima\AppData\Local\Temp\ps-script-4d261bdc-48d6-4837-b73f-70f877c3940e.ps1:106 char:3
-+   & $ESBMC $j[1] $j[2] 2>&1 | Out-File $log -Append -Encoding utf8
-+   ~~~~~~~~~~~~~~~~~~~~~~~~~
-    + CategoryInfo          : NotSpecified: (Target: 64-bit ... with esbmclibc:String) [], RemoteException
-    + FullyQualifiedErrorId : NativeCommandError
- 
+ESBMC version 8.3.0 64-bit x86_64 windows
+Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\connect_memleak_harness.c
 Converting
 Generating GOTO Program
 GOTO program creation time: 0.388s
-GOTO program processing time: 0.000s
+GOTO program processing time: 0.005s
 Starting Bounded Model Checking
 Unwinding loop 35 iteration 1   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
 Unwinding loop 35 iteration 2   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
@@ -21,79 +16,47 @@ Unwinding loop 35 iteration 5   file harnesses\mosquitto\connect_memleak_harness
 Unwinding loop 35 iteration 6   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
 Unwinding loop 35 iteration 7   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
 Unwinding loop 35 iteration 8   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
-Unwinding loop 38 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 9   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 10   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 11   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 12   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 13   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 14   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 15   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Not unwinding loop 38 iteration 16   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 9   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 10   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 11   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 12   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 13   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 14   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Unwinding loop 38 iteration 15   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Not unwinding loop 38 iteration 16   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function 
-__memcpy_impl
-Symex completed in: 0.061s (706 assignments)
-Caching time: 0.005s (removed 29 assertions)
-Slicing time: 0.007s (removed 321 assignments)
+Unwinding loop 38 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 9   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 10   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 11   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 12   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 13   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 14   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 15   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Not unwinding loop 38 iteration 16   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 3   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 4   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 9   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 10   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 11   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 12   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 13   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 14   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Unwinding loop 38 iteration 15   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Not unwinding loop 38 iteration 16   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
+Symex completed in: 0.067s (706 assignments)
+Caching time: 0.006s (removed 29 assertions)
+Slicing time: 0.000s (removed 321 assignments)
 Generated 440 VCC(s), 230 remaining after simplification (356 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.005s
+Encoding to solver time: 0.006s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.819s
+Runtime decision procedure: 0.853s
 Building error trace
 
 [Counterexample]
@@ -139,8 +102,7 @@ State 10 file harnesses\mosquitto\connect_memleak_harness.c line 184 column 5 fu
 ----------------------------------------------------
   datalen = 1 (00000000 00000000 00000000 00000001)
 
-State 14 file harnesses\mosquitto\connect_memleak_harness.c line 55 column 5 function process_connect_will_vulnerable 
-thread 0
+State 14 file harnesses\mosquitto\connect_memleak_harness.c line 55 column 5 function process_connect_will_vulnerable thread 0
 ----------------------------------------------------
   will_struct = ( struct will_message *)(&dynamic_1_array[0])
 
@@ -153,4 +115,3 @@ Violated property:
 
 
 VERIFICATION FAILED
-ESBMC version 8.3.0 64-bit x86_64 windows
