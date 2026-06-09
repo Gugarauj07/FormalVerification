@@ -1,7 +1,5 @@
 # Catálogo de APIs externas — Mosquitto broker vs ESBMC
 
-Documento de apoio ao TCC: símbolos que impedem verificação direta do broker completo sem *operational models*.
-
 ## Metodologia de levantamento
 
 1. Objetivo: compilar `src/mosquitto.c` e bibliotecas do broker com ESBMC (front-end C).
@@ -10,14 +8,15 @@ Documento de apoio ao TCC: símbolos que impedem verificação direta do broker 
 
 ## APIs POSIX de rede (prioridade alta)
 
-| API | Uso no Mosquitto | Impacto sem modelo |
-|-----|------------------|-------------------|
-| `socket` | listeners TCP/UDP | Estado de rede indefinido |
-| `bind` / `listen` / `accept` | aceitar conexões | Idem |
-| `connect` | bridges outbound | Idem |
-| `send` / `recv` / `write` / `read` | I/O de pacotes MQTT | Traces não reproduzíveis |
-| `select` / `poll` / `epoll` | loop principal do broker | Bloqueio / eventos abstratos |
-| `getaddrinfo` / `getnameinfo` | resolução DNS | Não determinístico |
+| API | Uso no Mosquitto | Impacto sem modelo | Status |
+|-----|------------------|--------------------|--------|
+| `socket` | listeners TCP/UDP | Estado de rede indefinido | **modelado** (`network_stubs.c`) |
+| `bind` / `listen` / `accept` | aceitar conexões | Idem | **modelado** |
+| `connect` | bridges outbound | Idem | stub trivial (retorna 0) |
+| `send` / `recv` / `write` / `read` | I/O de pacotes MQTT | Traces não reproduzíveis | **modelado** |
+| `select` / `poll` | loop principal do broker | Bloqueio / eventos abstratos | **modelado** (`network_stubs.c`) |
+| `epoll_*` | loop principal (Linux) | Bloqueio / eventos abstratos | pendente |
+| `getaddrinfo` / `getnameinfo` | resolução DNS | Não determinístico | pendente |
 
 ## APIs de sistema e tempo
 
@@ -33,7 +32,7 @@ Documento de apoio ao TCC: símbolos que impedem verificação direta do broker 
 
 ## Protótipo mínimo implementado
 
-Ver [esbmc_models/network_stubs.c](../esbmc_models/network_stubs.c): stubs de `socket`, `recv`, `send` com buffer simbólico e retorno nondet, suficientes para compilar harnesses de integração futuros — **não** substituem o broker completo.
+Ver [esbmc_models/network_stubs.c](../esbmc_models/network_stubs.c): stubs de `socket`, `recv`, `send`, `select` e `poll` com buffer simbólico e retorno nondet — suficientes para harnesses de integração, mas **não** substituem o broker completo.
 
 ## Subsistemas verificáveis sem rede (estado atual)
 
@@ -54,6 +53,13 @@ Ver [esbmc_models/network_stubs.c](../esbmc_models/network_stubs.c): stubs de `s
 
 Compilação: `esbmc harness.c esbmc_models/network_stubs.c --unwind N`.
 
+## Novo achado (proxy_v2.c, 2.1.x)
+
+| Harness | Tipo | Resultado |
+|---------|------|-----------|
+| `proxy_v2_tlv_harness.c` | underflow uint16 em `read_tlv_ssl` | FAILED |
+| `proxy_v2_tlv_harness_fixed.c` | fix proposto | SUCCESSFUL |
+
 ## Próximo passo
 
-Incorporar `socket_lib.c` (fork em `esbmc/`) na biblioteca c2goto do ESBMC e verificar módulos Mosquitto que usam `select`/`poll` além de `recv`.
+Incorporar modelos em `socket_lib.c` na biblioteca c2goto do ESBMC (fork local) e verificar trechos reais de `packet_mosq.c` / loop principal com `select`/`poll`.
