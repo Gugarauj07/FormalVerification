@@ -5,7 +5,8 @@
  *   esbmc meu_harness.c esbmc_models/network_stubs.c --unwind 8
  *
  * Modelo: socket retorna fd simbolico; recv preenche buffer com bytes nondet;
- * send retorna sucesso. Nao modela TCP real nem erros de OS.
+ * send retorna sucesso; select/poll retornam resultado nondet indicando
+ * quais descritores estao prontos. Nao modela TCP real nem erros de OS.
  */
 
 #include <stdint.h>
@@ -92,4 +93,95 @@ int close(int fd)
 {
     (void)fd;
     return 0;
+}
+
+/* -----------------------------------------------------------------------
+ * select() — modelo operacional para multiplexacao de I/O
+ *
+ * Semantica abstrata:
+ *   - Retorna um valor nondet entre -1 e nfds (inclusive).
+ *   - Se o retorno for > 0, marca bits nondet em readfds/writefds/exceptfds
+ *     dentro do intervalo [0, nfds), modelando o comportamento de qualquer
+ *     subconjunto de descritores que podem estar prontos.
+ *   - Se o retorno for 0, nenhum bit e marcado (timeout).
+ *   - Se o retorno for -1, os conjuntos nao sao modificados (erro).
+ *   - O argumento timeout e ignorado: o modelo e instantaneo para o
+ *     verificador, que explora todos os resultados possiveis.
+ * ----------------------------------------------------------------------- */
+#ifndef FD_SETSIZE
+#define FD_SETSIZE 64
+#endif
+
+typedef struct {
+    unsigned long fds_bits[FD_SETSIZE / (8 * sizeof(unsigned long)) + 1];
+} fd_set_stub;
+
+struct timeval_stub {
+    long tv_sec;
+    long tv_usec;
+};
+
+int select(int nfds, fd_set_stub *readfds, fd_set_stub *writefds,
+           fd_set_stub *exceptfds, struct timeval_stub *timeout)
+{
+    (void)timeout;
+    int ret = __VERIFIER_nondet_int();
+    __ESBMC_assume(ret >= -1 && ret <= nfds);
+    if (ret > 0) {
+        /* Mark nondet bits inside [0, nfds) for each non-NULL set. */
+        int word_count = (nfds / (int)(8 * sizeof(unsigned long))) + 1;
+        if (readfds) {
+            for (int i = 0; i < word_count; i++)
+                readfds->fds_bits[i] = (unsigned long)__VERIFIER_nondet_int();
+        }
+        if (writefds) {
+            for (int i = 0; i < word_count; i++)
+                writefds->fds_bits[i] = (unsigned long)__VERIFIER_nondet_int();
+        }
+        if (exceptfds) {
+            for (int i = 0; i < word_count; i++)
+                exceptfds->fds_bits[i] = (unsigned long)__VERIFIER_nondet_int();
+        }
+    }
+    return ret;
+}
+
+/* -----------------------------------------------------------------------
+ * poll() — modelo operacional para multiplexacao de I/O (POSIX)
+ *
+ * Semantica abstrata:
+ *   - Para cada pollfd na lista, preenche revents com um bitfield nondet,
+ *     restrito aos eventos solicitados em events (ou POLLERR/POLLHUP que
+ *     sempre podem ocorrer).
+ *   - Retorna um valor nondet entre -1 e nfds indicando quantos descritores
+ *     tem eventos pendentes.
+ * ----------------------------------------------------------------------- */
+#ifndef POLLIN
+#define POLLIN   0x0001
+#define POLLOUT  0x0004
+#define POLLERR  0x0008
+#define POLLHUP  0x0010
+#define POLLNVAL 0x0020
+#endif
+
+struct pollfd_stub {
+    int   fd;
+    short events;
+    short revents;
+};
+
+int poll(struct pollfd_stub *fds, unsigned int nfds, int timeout)
+{
+    (void)timeout;
+    if (!fds || nfds == 0) return 0;
+
+    for (unsigned int i = 0; i < nfds; i++) {
+        /* revents is a nondet subset of requested events plus error flags */
+        short mask = (short)(fds[i].events | POLLERR | POLLHUP | POLLNVAL);
+        short rv   = (short)__VERIFIER_nondet_int();
+        fds[i].revents = rv & mask;
+    }
+    int ret = __VERIFIER_nondet_int();
+    __ESBMC_assume(ret >= -1 && ret <= (int)nfds);
+    return ret;
 }
