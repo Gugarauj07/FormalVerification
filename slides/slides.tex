@@ -49,170 +49,237 @@
 }
 
 \title{Operational Models para Verifica\c{c}\~ao de Brokers MQTT com ESBMC}
-\subtitle{Apresenta\c{c}\~ao inicial}
+\subtitle{Defesa Intermedi\'aria}
 \author{Gustavo Lima \and Willian Jean \and Paulo Gomes}
-\date{Maio de 2026}
+\date{Junho de 2026}
 
 \begin{document}
 
 \maketitle
 
-\begin{frame}{Ideia central}
-    \Large
-    Queremos usar \textbf{verifica\c{c}\~ao formal} para encontrar vulnerabilidades em programas C usados em IoT.
-
-    \vspace{1em}
-    \normalsize
-    O caso escolhido \'{e} o \textbf{Eclipse Mosquitto}, um broker MQTT escrito em C.
-
-    \vspace{0.8em}
-    \begin{block}{Tese do trabalho}
-        Investigar a extens\~ao do ESBMC com \emph{operational models} para APIs de rede, permitindo verificar m\'odulos de software MQTT real.
-    \end{block}
+% ------------------------------------------------------------------
+\begin{frame}{Roteiro}
+    \tableofcontents[hideallsubsections]
 \end{frame}
 
-\begin{frame}{Por que Mosquitto e MQTT?}
-    \begin{itemize}
-        \item MQTT \'{e} um protocolo leve muito usado em Internet das Coisas.
-        \item O broker \'{e} o ponto central: recebe, roteia e entrega mensagens.
-        \item O Mosquitto \'{e} open source, amplamente usado e escrito em C.
-        \item Bugs no broker podem afetar toda a rede de dispositivos.
-    \end{itemize}
+% ==================================================================
+\section{Progresso}
 
-    \vspace{0.8em}
-    \alert{Esse contexto junta seguran\c{c}a, C, IoT e verifica\c{c}\~ao formal em um problema real.}
+\begin{frame}{O que foi feito / O que \'e novo}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Estabelecido anteriormente}
+        \begin{itemize}
+            \item ESBMC com BMC para C
+            \item Conceito de harness simb\'olico
+            \item 7 CVEs do Mosquitto modelados
+            \item Problema: APIs de rede sem modelo
+            \item Modelos: \texttt{socket}, \texttt{recv}, \texttt{send}, \texttt{bind}, \texttt{accept}, \texttt{close}
+        \end{itemize}
+        \column{0.48\textwidth}
+        \alert{\textbf{Desde ent\~ao}}
+        \begin{itemize}
+            \item Modelos \texttt{select}/\texttt{poll} conclu\'idos
+            \item 4 harnesses de integra\c{c}\~ao via \texttt{recv()}
+            \item \textbf{21 harnesses totais verificados}
+            \item \alert{Nova vulnerabilidade encontrada no Mosquitto~2.1.x (CWE-191)}
+        \end{itemize}
+    \end{columns}
 \end{frame}
 
-\begin{frame}{Problema}
-    O ESBMC j\'a verifica propriedades importantes em C:
-
-    \begin{itemize}
-        \item buffer overflow;
-        \item integer overflow;
-        \item null pointer dereference;
-        \item use-after-free;
-        \item memory leak.
-    \end{itemize}
+\begin{frame}{Modelos Operacionais Implementados}
+    \textbf{Arquivo:} \texttt{esbmc\_models/network\_stubs.c}
 
     \vspace{0.5em}
-    \textbf{Mas software de rede usa muitas APIs externas:}
-    \texttt{socket}, \texttt{accept}, \texttt{recv}, \texttt{send}, \texttt{select}, \texttt{poll}.
-
-    \vspace{0.5em}
-    \alert{Sem modelos adequados dessas APIs, a verifica\c{c}\~ao de programas reais fica limitada.}
-\end{frame}
-
-\begin{frame}{O que s\~ao \emph{operational models}?}
-    \textbf{Operational model} \'{e} uma implementa\c{c}\~ao abstrata de uma fun\c{c}\~ao externa.
-
-    \vspace{0.6em}
-    Em vez de verificar a implementa\c{c}\~ao real do sistema operacional, o ESBMC usa um modelo menor e controlado.
-
-    \vspace{0.8em}
-    \begin{exampleblock}{Exemplo}
-        Um modelo de \texttt{recv()} pode dizer: ``o buffer recebe at\'e \texttt{len} bytes n\~ao determin\'isticos''.
-    \end{exampleblock}
-
-    \vspace{0.6em}
-    Isso preserva o comportamento relevante para seguran\c{c}a sem explodir o espa\c{c}o de estados.
-\end{frame}
-
-\begin{frame}{Pergunta de pesquisa}
-    \begin{block}{Pergunta}
-        Como estender o ESBMC com \emph{operational models} para APIs de rede, de forma a detectar vulnerabilidades em m\'odulos de brokers MQTT escritos em C?
-    \end{block}
-
-    \vspace{0.8em}
-    \textbf{Objetivo geral}
-
-    Investigar e avaliar modelos operacionais que permitam a an\'alise formal de m\'odulos do Mosquitto com ESBMC.
-\end{frame}
-
-\begin{frame}{Objetivos e metodologia}
-    \textbf{Resultados esperados:}
-    \begin{itemize}
-        \item Cat\'alogo das APIs que bloqueiam a verifica\c{c}\~ao direta do Mosquitto.
-        \item Conjunto de \emph{operational models} para APIs de rede (\texttt{socket}, \texttt{recv}, \texttt{send}, \texttt{select}).
-        \item Avalia\c{c}\~ao comparativa: ESBMC sem modelos vs.\ ESBMC com modelos.
-        \item Estudo de caso sobre a viabilidade de reproduzir CVEs hist\'oricos do Mosquitto.
-    \end{itemize}
-
-    \vspace{0.8em}
-    \textbf{Abordagem:}
-
-    \medskip
-    \small
-    An\'alise do c\'odigo-fonte
-    $\;\rightarrow\;$ Sele\c{c}\~ao de APIs
-    $\;\rightarrow\;$ Implementa\c{c}\~ao incremental
-    $\;\rightarrow\;$ Valida\c{c}\~ao comparativa
-    $\;\rightarrow\;$ Estudo de caso
-\end{frame}
-
-\begin{frame}[fragile]{Exemplo: parser do \emph{Remaining Length}}
-    O campo \emph{Remaining Length} do MQTT usa codifica\c{c}\~ao vari\'avel. Um parser incorreto pode sofrer overflow aritm\'etico.
-
-    \vspace{0.3em}
-    \lstinputlisting[style=cstyle,firstline=6,lastline=18]{code/mqtt_bof_example.c}
-\end{frame}
-
-\begin{frame}[fragile]{Execu\c{c}\~ao real do ESBMC}
-    Comando usado:
-
-    \begin{lstlisting}[style=outstyle]
-esbmc slides\code\mqtt_bof_example.c --unwind 8 --no-unwinding-assertions --unsigned-overflow-check
-    \end{lstlisting}
-
-    \vspace{0.3em}
-    \lstinputlisting[style=outstyle,firstline=23,lastline=35]{code/esbmc_output.txt}
-\end{frame}
-
-\begin{frame}{CVEs reais recentes (2023--2024)}
-    \small
-    \begin{itemize}
-        \item \textbf{CVE-2023-3592}: \emph{memory leak} em CONNECT v5 (Will inv\'alido).
-        \item \textbf{CVE-2023-0809}: pacote inicial n\~ao-CONNECT $\rightarrow$ aloca\c{c}\~ao excessiva.
-        \item \textbf{CVE-2023-28366}: QoS~2 duplicado sem PUBREC $\rightarrow$ \emph{leak}.
-        \item \textbf{CVE-2024-3935}: \emph{double free} em bridge com \emph{topic remapping}.
-    \end{itemize}
-
-    \vspace{0.5em}
-    Vers\~ao atual (2.1.x): corre\c{c}\~oes aplicadas; usamos CVEs como or\'aculo, n\~ao como 0-day.
-\end{frame}
-
-\begin{frame}{Resultados com ESBMC (harnesses)}
-    \small
-    \begin{tabular}{lcc}
+    \begin{tabular}{ll}
         \toprule
-        Caso & Vulner\'avel & Corrigido / 2.1.x \\
+        Fun\c{c}\~ao & Modelo \\
         \midrule
-        Remaining Length (2017) & FAILED & --- \\
-        CONNECT memleak (2017) & FAILED & --- \\
-        Will properties (2023) & FAILED & SUCCESSFUL \\
-        Primeiro pacote (2023) & FAILED & SUCCESSFUL \\
-        Bridge remap (2024) & FAILED & SUCCESSFUL \\
-        Varint / limites MQTT & --- & SUCCESSFUL \\
+        \texttt{socket} & fd nondet em $[3, 63]$ \\
+        \texttt{bind}, \texttt{listen} & retornam 0 \\
+        \texttt{accept} & fd cliente nondet \\
+        \texttt{recv} & preenche buffer com bytes nondet \\
+        \texttt{send} & retorna comprimento nondet \\
+        \texttt{close} & retorna 0 \\
+        \texttt{select} \textbf{(novo)} & seta bits nondet em \texttt{fd\_set} \\
+        \texttt{poll} \textbf{(novo)} & preenche \texttt{revents} nondet \\
         \bottomrule
     \end{tabular}
 
     \vspace{0.4em}
-    Harnesses e logs: \texttt{harnesses/mosquitto/}
+    \small Os novos modelos \texttt{select}/\texttt{poll} cobrem o loop de
+    eventos do broker, antes inacess\'ivel \`a verifica\c{c}\~ao.
 \end{frame}
 
-\begin{frame}{Contribui\c{c}\~ao esperada}
-    \begin{itemize}
-        \item Cat\'alogo de APIs de rede + \emph{stubs} (\texttt{esbmc\_models/}).
-        \item Harnesses ESBMC para CVEs 2017 e 2023--2024.
-        \item Propriedades verificadas no parser MQTT (c\'odigo recente).
-        \item Pr\'oximo passo: integrar modelos \texttt{socket}/\texttt{recv}/\texttt{send} ao broker.
-    \end{itemize}
+% ==================================================================
+\section{Resultados}
 
-    \vspace{0.6em}
-    \alert{A contribui\c{c}\~ao n\~ao \'{e} criar outro analisador, mas tornar o ESBMC mais aplic\'avel a software de rede real.}
+\begin{frame}{CVEs Cobertos (or\'aculo de valida\c{c}\~ao)}
+    \small
+    \begin{tabular}{p{1.9cm}p{3.2cm}lc}
+        \toprule
+        CVE & Tipo & CWE & Fix \\
+        \midrule
+        2017-7651 & Integer Overflow & 190 & 1.4.15 \\
+        2017-7654 & Memory Leak      & 401 & 1.4.15 \\
+        2017-7650 & ACL Bypass       & 284 & 1.4.12 \\
+        2023-3592  & Memory Leak     & 401 & 2.0.16 \\
+        2023-0809  & Excess Alloc    & 400 & 2.0.16 \\
+        2023-28366 & Memory Leak QoS2& 401 & 2.0.16 \\
+        2024-3935  & Double Free     & 415 & 2.0.19 \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.3em}
+    + 2 harnesses de propriedade MQTT~v5 \quad
+    + 4 harnesses de integra\c{c}\~ao via \texttt{recv()}
 \end{frame}
 
+\begin{frame}{Resultados: Detec\c{c}\~ao}
+    \scriptsize
+    \begin{tabular}{p{3.0cm}lcc}
+        \toprule
+        Subsistema & Flags & Vuln. & Fix \\
+        \midrule
+        \multicolumn{4}{l}{\textit{CVE -- isolados}} \\
+        \texttt{remaining\_len}    & uof        & \alert{FAIL} & -- \\
+        \texttt{connect\_memleak}  & mlc        & \alert{FAIL} & -- \\
+        \texttt{acl\_bypass}       & uw~32      & \alert{FAIL} & SUCC \\
+        \texttt{will\_properties}  & mlc        & \alert{FAIL} & SUCC \\
+        \texttt{initial\_packet}   & uw~4       & \alert{FAIL} & SUCC \\
+        \texttt{qos2\_dup}         & mlc        & \alert{FAIL} & SUCC \\
+        \texttt{bridge\_remap}     & mlc+uw~16  & \alert{FAIL} & SUCC \\
+        \multicolumn{4}{l}{\textit{Integra\c{c}\~ao / Propriedades}} \\
+        \texttt{pkt\_recv\_*} (2)  & net\_stubs & \alert{FAIL} & SUCC \\
+        \texttt{varint}/\texttt{max\_pkt}     & uw~8       & --           & SUCC \\
+        \multicolumn{4}{l}{\textit{Nova falha (2.1.x)}} \\
+        \texttt{proxy\_v2\_tlv}   & uof+assert & \alert{FAIL} & SUCC \\
+        \bottomrule
+    \end{tabular}
+    \vspace{0.2em}\\
+    {\tiny uof=\texttt{--unsigned-overflow-check}; mlc=\texttt{--memory-leak-check}; uw=\texttt{--unwind}; assert=\texttt{\_\_ESBMC\_assert} manual}
+\end{frame}
+
+% ==================================================================
+\section{Nova Vulnerabilidade (Mosquitto 2.1.x)}
+
+\begin{frame}{Resultados: Desempenho (ESBMC~8.3, z3)}
+    \small
+    \begin{tabular}{lcrr}
+        \toprule
+        Harness & Resultado & Tempo (s) & Mem.\ (MB) \\
+        \midrule
+        \texttt{remaining\_length} (vuln.)   & \alert{FAILED}    &   1,0 &   97 \\
+        \texttt{connect\_memleak} (vuln.)    & \alert{FAILED}    &   1,5 &  166 \\
+        \texttt{acl\_bypass} (unwind 32)     & \alert{FAILED}    &  87,6 & 2220 \\
+        \texttt{acl\_bypass\_fixed}          & SUCCESSFUL        &  23,1 & 1996 \\
+        \texttt{will\_properties} (vuln.)    & \alert{FAILED}    &   1,0 &   98 \\
+        \texttt{qos2\_dup} (vuln.)           & \alert{FAILED}    &   1,3 &  119 \\
+        \texttt{bridge\_remap} (vuln.)       & \alert{FAILED}    &   1,0 &   78 \\
+        \texttt{pkt\_recv\_rem\_len} (vuln.) & \alert{FAILED}    &   0,6 &   77 \\
+        \texttt{proxy\_v2\_tlv} (vuln., 2.1.x) & \alert{FAILED} &   0,9 &   73 \\
+        \texttt{proxy\_v2\_tlv} (fixed)      & SUCCESSFUL        &   0,5 &   73 \\
+        \emph{demais harnesses}              & SUCCESSFUL        & $<4$  & $<$135 \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.4em}
+    \small 19/21 harnesses concluem em $<$~4\,s e $<$~170\,MB.
+    \texttt{acl\_bypass} \'e outlier (unwind~32).
+\end{frame}
+
+\begin{frame}{Vulnerabilidade Encontrada no Mosquitto~2.1.x (1/2)}
+    \begin{block}{Falha em \texttt{src/proxy\_v2.c} -- \texttt{read\_tlv\_ssl} (CWE-191)}
+        Parser de sub-TLVs SSL no PROXY Protocol~v2.\\[0.3em]
+        \textbf{Bug:} \texttt{len = (uint16\_t)(len - (3 + tlv\_len))} executado\\sem verificar
+        \texttt{3 + tlv\_len \textbf{<=} len} antes.
+    \end{block}
+    \vspace{0.3em}
+    \textbf{Contraexemplo ESBMC ($<$1\,s):}
+    \small
+    \begin{tabular}{ll}
+        \texttt{ssl\_tlv\_len} = 256 & \texttt{len} = 251 (ap\'os 5-byte SSL header) \\
+        \texttt{tlv\_len} = 253       & \textit{passa} no buffer check ($\leq$492) \\
+        \multicolumn{2}{l}{\texttt{3+253=256 > 251} \;\textbf{$\Rightarrow$ len wraps para 65.531}}
+    \end{tabular}
+    \vspace{0.3em}\\
+    \alert{FAILED} (vuln.) \; / \; SUCCESSFUL (corre\c{c}\~ao: adicionar guarda)\\[0.2em]
+    \footnotesize Requer \texttt{proxy\_protocol~true}. Ser\'a reportado ao Eclipse (\emph{coordinated disclosure}).
+\end{frame}
+
+\begin{frame}{Vulnerabilidade Encontrada no Mosquitto~2.1.x (2/2)}
+    \begin{alertblock}{Por que nem flags autom\'aticas nem fuzzer detectaram}
+        \small
+        A subtra\c{c}\~ao \texttt{len - (3+tlv\_len)} ocorre em aritm\'etica \texttt{int}
+        com sinal (promo\c{c}\~ao impl\'icita do C).\\[0.3em]
+        \begin{tabular}{ll}
+            \texttt{--unsigned-overflow-check} & n\~ao acionado (opera\c{c}\~ao \'e em \texttt{int}) \\
+            \texttt{--overflow-check}          & $-4$ \'e \texttt{int} v\'alido \\
+            UBSan / fuzzer (OSS-Fuzz)          & sem \emph{crash}, comportamento definido em C \\
+        \end{tabular}
+    \end{alertblock}
+    \vspace{0.3em}
+    \begin{block}{Por que o ESBMC com harness detectou}
+        \small
+        O harness especifica o \textbf{invariante de dom\'{\i}nio} como asser\c{c}\~ao:\\[0.2em]
+        \texttt{\_\_ESBMC\_assert((uint32\_t)3 + tlv\_len <= (uint32\_t)len, ...)}\\[0.2em]
+        \'E exatamente esse tipo de propriedade --- n\~ao um crash ---
+        que a verifica\c{c}\~ao formal com asser\c{c}\~ao de dom\'{\i}nio consegue verificar.
+    \end{block}
+    \vspace{0.2em}
+    \footnotesize Commit \texttt{23c918ee} (jan./2026): fuzzer para \texttt{proxy\_v2} adicionado. Este bug n\~ao foi encontrado pelo fuzzer.
+\end{frame}
+
+% ==================================================================
+\section{Pr\'oximos Passos e Cronograma}
+
+\begin{frame}{Pr\'oximos Passos}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Limita\c{c}\~oes atuais}
+        \begin{itemize}\small
+            \item An\'alise \emph{context-bounded}
+            \item CVE-2024-8376 ainda n\~ao modelado
+            \item APIs pendentes: \texttt{epoll\_*}, TLS/SSL
+            \item Modelos externos ao \texttt{c2goto}
+        \end{itemize}
+        \column{0.48\textwidth}
+        \textbf{A fazer}
+        \begin{enumerate}\small
+            \item Divulgar falha ao Eclipse (\emph{disclosure})
+            \item Integrar modelos ao \texttt{c2goto}
+            \item Buscar mais falhas no Mosquitto 2.1.x
+            \item Harness para CVE-2024-8376
+            \item Submeter artigo final
+        \end{enumerate}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Cronograma do trabalho}
+    \small
+    \begin{tabular}{clcc}
+        \toprule
+        \# & Atividade & Per\'iodo & Status \\
+        \midrule
+        1 & Pesquisa bibliogr\'afica e CVEs       & Mar--Abr/26 & \checkmark \\
+        2 & Harnesses isolados                    & Mar--Mai/26 & \checkmark \\
+        3 & Operational models (socket/recv/send) & Abr--Mai/26 & \checkmark \\
+        4 & Modelos select/poll + integra\c{c}\~ao     & Mai/26      & \checkmark \\
+        5 & Experimentos e m\'etricas              & Mai--Jun/26 & \checkmark \\
+        6 & Defesa intermedi\'aria                 & Jun/26      & \textbf{agora} \\
+        7 & Integra\c{c}\~ao c2goto + defesa final     & Jul/26      & pendente \\
+        \bottomrule
+    \end{tabular}
+\end{frame}
+
+% ==================================================================
 \begin{frame}[standout]
     Obrigado.
+
+    \vspace{0.8em}
+    \small Reposit\'orio: \texttt{harnesses/mosquitto/} \quad
+    Logs: \texttt{*.log} \quad
+    Modelos: \texttt{esbmc\_models/}
 \end{frame}
 
 \end{document}
