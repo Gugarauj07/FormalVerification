@@ -10,6 +10,7 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage{url}
+\usepackage{booktabs}
 
 \renewcommand{\IEEEkeywordsname}{Palavras-chave}
 
@@ -86,17 +87,224 @@ Desenvolver \emph{operational models} para APIs de rede no ESBMC e avaliar sua e
 
     \item Reproduzir CVEs hist\'oricos e recentes do Mosquitto com o ESBMC e comparar vers\~oes vulner\'aveis e corrigidas.
 
-    \item Avaliar o impacto da extens\~ao em termos de tempo de verifica\c{c}\~ao, consumo de mem\'oria e taxa de detec\c{c}\~ao.
+    \item Avaliar o impacto da extens\~ao em termos de tempo de verifica\c{c}\~ao,
+          consumo de mem\'oria e taxa de detec\c{c}\~ao.
+
+    \item Investigar potenciais vulnerabilidades na vers\~ao atual do Mosquitto
+          (2.1.x), aplicando a metodologia ao c\'odigo mais recente, com o
+          objetivo de realizar divulga\c{c}\~ao respons\'avel ao projeto Eclipse
+          caso uma falha seja encontrada.
 \end{enumerate}
 
-\section{Metodologia}
+% -----------------------------------------------------------------------
+\section{Trabalhos Correlatos}
+\label{sec:correlatos}
+
+Verifica\c{c}\~ao formal e an\'alise din\^amica t\^em sido aplicadas a software~C por
+meio de diversas ferramentas e abordagens. Esta se\c{c}\~ao situa o presente trabalho
+em rela\c{c}\~ao \`as mais relevantes.
+
+\subsection{CBMC}
+O \emph{C Bounded Model Checker} (CBMC)~\cite{cbmc2004} \'e um verificador de
+modelos limitado para programas ANSI-C que traduz o programa e a nega\c{c}\~ao da
+propriedade em uma f\'ormula SAT/SMT. O CBMC \'e amplamente utilizado na
+ind\'ustria. A Amazon emprega-o para verificar bibliotecas criptogr\'aficas e
+m\'odulos do FreeRTOS. O CBMC inclui modelos operacionais para parte da
+biblioteca padr\~ao~C e a ferramenta \emph{goto-harness} para constru\c{c}\~ao de
+ambientes de verifica\c{c}\~ao. Em compara\c{c}\~ao, o ESBMC suporta m\'ultiplos
+back-ends SMT (z3, Bitwuzla, MathSAT5) e verifica\c{c}\~ao de programas
+concorrentes, mas possui cat\'alogo menor de modelos POSIX de rede, lacuna que
+este trabalho parcialmente preenche.
+
+\subsection{Frama-C}
+O Frama-C~\cite{frama_c} \'e uma plataforma de an\'alise est\'atica e
+verifica\c{c}\~ao dedutiva para programas~C, dotada de um \emph{plugin} de prova
+formal (WP) baseado em l\'ogica de separa\c{c}\~ao com anota\c{c}\~oes ACSL. A
+abordagem exige anota\c{c}\~oes manuais extensas no c\'odigo-fonte, sendo mais
+adequada a m\'odulos com especifica\c{c}\~oes formais expl\'icitas. A abordagem deste
+trabalho n\~ao requer altera\c{c}\~oes no c\'odigo do Mosquitto: propriedades de
+seguran\c{c}a s\~ao expressas nos \emph{harnesses} ou verificadas por checadores
+autom\'aticos do ESBMC.
+
+\subsection{Fuzzing}
+O \emph{fuzzing} baseado em cobertura (exemplificado por AFL, libFuzzer e pelo
+servi\c{c}o cont\'inuo OSS-Fuzz~\cite{ossfuzz}) \'{e} a principal t\'ecnica industrial
+de detec\c{c}\~ao de vulnerabilidades em software de rede. O Eclipse Mosquitto \'{e}
+coberto pelo OSS-Fuzz. O \emph{fuzzing} \'{e} eficaz para encontrar \emph{crashes}
+concretos, mas n\~ao oferece garantias de aus\^encia de defeitos: a cobertura
+depende da gera\c{c}\~ao aleat\'oria de entradas dentro do tempo de campanha. A
+verifica\c{c}\~ao formal com BMC explora simbolicamente todos os caminhos at\'e o
+limite de desenrolamento, garantindo que nenhum caminho de at\'e $k$ itera\c{c}\~oes
+exibe o defeito, garantia que o \emph{fuzzing} n\~ao pode fornecer.
+
+A complementaridade entre as t\'ecnicas fica evidenciada pela falha encontrada
+neste trabalho (Sec.~\ref{sec:proxy_v2_vuln}): o commit \texttt{23c918ee}
+(jan./2026) adicionou ao Mosquitto um \emph{fuzzer} libFuzzer dedicado ao
+mesmo subsistema (\texttt{proxy\_v2.c}) e corrigiu outros problemas no mesmo
+arquivo, mas n\~ao detectou a falha de \emph{underflow} em \texttt{len}. Isso
+ocorre porque a falha n\~ao gera \emph{crash} nem viola\c{c}\~ao de
+\emph{sanitizer}: \'e uma falha l\'ogica de valida\c{c}\~ao que s\'o \'e
+detectada quando se especifica o invariante correto do dom\'inio TLV como
+asser\c{c}\~ao formal.
+
+\subsection{Execu\c{c}\~ao Simb\'olica}
+O KLEE~\cite{klee2008} aplica execu\c{c}\~ao simb\'olica a programas~C para gerar
+automaticamente entradas de alta cobertura. Embora poderoso, o KLEE sofre com
+explos\~ao de caminhos em c\'odigo com muitos condicionais encadeados. O BMC
+adotado pelo ESBMC codifica todos os caminhos at\'e o limite~$k$ em uma \'unica
+f\'ormula SMT, sendo frequentemente mais escal\'avel para propriedades de seguran\c{c}a
+localizadas, como \emph{overflows} em um parser.
+
+% -----------------------------------------------------------------------
+\section{Referencial Te\'orico}
+\label{sec:referencial}
+
+\subsection{Bounded Model Checking}
+\emph{Bounded Model Checking} (BMC)~\cite{clarke2018handbook} verifica se um
+sistema viola uma propriedade~$\varphi$ em at\'e $k$ passos, transformando o par
+(sistema, $\neg\varphi$) em uma f\'ormula~$\phi_k$. Se $\phi_k$ for satisfat\'ivel,
+um contraexemplo com at\'e $k$ transi\c{c}\~oes \'e produzido; caso contr\'ario, a
+propriedade \'e verificada para esse horizonte. Para programas~C, o BMC desenrola
+la\c{c}os at\'e o limite~$k$, atribui vari\'aveis SSA (\emph{Static Single
+Assignment}) e codifica desvios como restri\c{c}\~oes SMT.
+
+\subsection{ESBMC}
+O ESBMC~\cite{cordeiro2012tse,gadelha2017sttt} compila programas C/C++ via
+front-end Clang para um \emph{goto-program} (representa\c{c}\~ao de fluxo de
+controle em forma plana). Sobre essa representa\c{c}\~ao, checadores autom\'aticos
+instrumentam asser\c{c}\~oes para: estouro aritm\'etico, acesso fora dos limites de
+\emph{array}, desreferencia de ponteiro nulo, uso ap\'os libera\c{c}\~ao e vazamento
+de mem\'oria. A f\'ormula resultante \'e enviada a um solucionador SMT.
+
+A biblioteca \texttt{c2goto} do ESBMC cont\'em modelos operacionais em~C para
+fun\c{c}\~oes de sistema (\texttt{malloc}, \texttt{memcpy}, \texttt{pthread\_mutex\_*},
+etc.). Ao encontrar um s\'imbolo externo sem modelo, o comportamento \'e n\~ao
+modelado e a verifica\c{c}\~ao pode produzir falsos negativos.
+
+\subsection{Modelos Operacionais}
+Um \emph{operational model} substitui a implementa\c{c}\~ao real de uma fun\c{c}\~ao
+externa por uma vers\~ao abstrata que captura os comportamentos relevantes para a
+verifica\c{c}\~ao. O modelo de \texttt{recv()}, por exemplo, preenche o buffer com
+bytes n\~ao-determin\'isticos e retorna um comprimento n\~ao-determin\'istico em
+$[0,\,\textit{len}]$, modelando qualquer sequ\^encia de bytes que um atacante possa
+enviar pela rede, sem que o verificador precise simular o kernel TCP/IP.
+
+\subsection{Protocolo MQTT~v5}
+O MQTT~\cite{mqtt_v5_spec} encapsula mensagens em \emph{packets} com: \emph{Fixed
+Header} (tipo + flags), \emph{Remaining Length} (\emph{Variable Byte Integer},
+at\'e 4 bytes, m\'aximo $2^{28}-1$) e carga \'util vari\'avel. O pacote
+\texttt{CONNECT} (tipo~\texttt{0x10}) inicia a sess\~ao e transporta ClientID,
+credenciais e, na vers\~ao~5, \emph{Will Properties}. Erros no processamento
+desses campos s\~ao a principal fonte de CVEs hist\'oricos do Mosquitto.
+
+\subsection{Classes de Vulnerabilidades (CWE)}
+\begin{itemize}
+    \item \textbf{CWE-190 (Integer Overflow)}: estouro em opera\c{c}\~ao aritm\'etica
+          (CVE-2017-7651).
+    \item \textbf{CWE-401 (Memory Leak)}: falha em liberar mem\'oria em todo caminho
+          de sa\'ida (CVE-2017-7654, CVE-2023-3592, CVE-2023-28366).
+    \item \textbf{CWE-193 (Off-by-One Error)}: acesso imediatamente al\'em do limite
+          de \emph{array}.
+    \item \textbf{CWE-284 (Improper Access Control)}: verifica\c{c}\~ao incorreta de
+          ACL (CVE-2017-7650).
+    \item \textbf{CWE-415 (Double Free)}: libera\c{c}\~ao dupla de ponteiro,
+          corrompendo o \emph{heap} (CVE-2024-3935).
+    \item \textbf{CWE-191 (Integer Underflow)}: subtra\c{c}\~ao unsigned que
+          produz wraparound, causando comportamento incorreto em laços de
+          processamento (identificado neste trabalho em \texttt{proxy\_v2.c}).
+\end{itemize}
+
+% -----------------------------------------------------------------------
+\section{M\'etodo Proposto}
 \label{sec:metodologia}
 
-A verifica\c{c}\~ao segue o padr\~ao de \emph{harnesses} isolados: trechos do c\'odigo Mosquitto (vers\~ao vulner\'avel ou corrigida) s\~ao copiados para arquivos C independentes, com estruturas reduzidas e entradas simb\'olicas (\texttt{\_\_VERIFIER\_nondet\_*}) ou pacotes concretos que disparam o defeito.
+\subsection{O que \'{e} um Harness de Verifica\c{c}\~ao}
+Um \emph{harness} de verifica\c{c}\~ao \'{e} um arquivo C auxiliar criado
+especificamente para isolar e verificar uma fun\c{c}\~ao ou subsistema sem
+compilar o programa completo. Em vez de executar o broker Mosquitto inteiro,
+o harness:
 
-Para cada CVE, define-se uma propriedade de seguran\c{c}a expressa em \texttt{\_\_ESBMC\_assert} ou verificada por recursos nativos do ESBMC (\texttt{--unsigned-overflow-check}, \texttt{--memory-leak-check}, checagem de limites de \emph{array}). O ESBMC~8.3 executa \emph{bounded model checking} com limite de desenrolamento (\texttt{--unwind}).
+\begin{itemize}
+    \item define vers\~oes simplificadas das estruturas de dados necess\'arias;
+    \item cria entradas simb\'olicas via \texttt{\_\_VERIFIER\_nondet\_*},
+          representando qualquer valor que um atacante possa fornecer;
+    \item restringe o espa\c{c}o de entradas a valores v\'alidos via
+          \texttt{\_\_ESBMC\_assume} (por exemplo, tamanho do pacote dentro
+          dos limites do protocolo);
+    \item chama a fun\c{c}\~ao sob an\'alise com essas entradas simb\'olicas;
+    \item especifica a propriedade de seguran\c{c}a via \texttt{\_\_ESBMC\_assert}
+          ou flags do verificador (\texttt{--memory-leak-check}, etc.).
+\end{itemize}
 
-As APIs de rede do broker completo n\~ao s\~ao verificadas de ponta a ponta nesta fase; o foco s\~ao subsistemas de parsing, ACL, propriedades MQTT~v5 e l\'ogica de ponteiros (bridge). Um cat\'alogo de APIs externas e \emph{stubs} m\'inimos est\~ao em \texttt{docs/api\_catalog.md} e \texttt{esbmc\_models/network\_stubs.c}.
+Essa abordagem elimina a necessidade de compilar as dezenas de depend\^encias
+externas do Mosquitto (bibliotecas TLS, threads, sistema de arquivos) e permite
+que o ESBMC foque nos caminhos de c\'odigo relevantes para a vulnerabilidade
+em an\'alise. Cada harness \'{e} portanto uma esp\'ecie de \emph{unit test
+simb\'olico}: ao inv\'es de executar com uma entrada concreta, o verificador
+explora todas as entradas poss\'iveis dentro do espa\c{c}o definido.
+
+\subsection{Vis\~ao Geral do Processo}
+A abordagem proposta combina \emph{harnesses} isolados de verifica\c{c}\~ao com
+modelos operacionais para APIs POSIX de rede, seguindo o fluxo de cinco etapas:
+
+\begin{enumerate}
+    \item \textbf{Sele\c{c}\~ao do CVE}: identificar o commit/tag do Mosquitto que
+          introduz a vulnerabilidade e o que a corrige, com base no hist\'orico
+          p\'ublico do NVD e do reposit\'orio Eclipse.
+
+    \item \textbf{Extra\c{c}\~ao da fun\c{c}\~ao vulner\'avel}: isolar a fun\c{c}\~ao ou
+          subsistema relevante e reduzir structs ao m\'inimo necess\'ario para
+          compilar com o ESBMC sem depend\^encias externas.
+
+    \item \textbf{Constru\c{c}\~ao do harness}: definir entrada simb\'olica via
+          \texttt{\_\_VERIFIER\_nondet\_*} e restri\c{c}\~oes via
+          \texttt{\_\_ESBMC\_assume} que representam o espa\c{c}o de entradas do
+          atacante.
+
+    \item \textbf{Especifica\c{c}\~ao da propriedade}: expressar a propriedade de
+          seguran\c{c}a em \texttt{\_\_ESBMC\_assert} ou usar flags nativas do ESBMC
+          (\texttt{--unsigned-overflow-check}, \texttt{--memory-leak-check}).
+
+    \item \textbf{Verifica\c{c}\~ao comparativa}: executar o ESBMC nas vers\~oes
+          vulner\'avel e corrigida. Espera-se \textbf{FAILED} na vers\~ao vulner\'avel
+          e \textbf{SUCCESSFUL} na vers\~ao corrigida.
+\end{enumerate}
+
+\subsection{Harnesses de Integra\c{c}\~ao com Rede Simb\'olica}
+Para subsistemas que leem dados diretamente via \texttt{recv()}, constroem-se
+\emph{harnesses de integra\c{c}\~ao} que compilam junto com
+\texttt{esbmc\_models/network\_stubs.c}. Nesse caso, o atacante controla
+simbolicamente os bytes retornados por cada chamada a \texttt{recv()}, sem que
+seja necess\'ario fixar um pacote MQTT concreto; o verificador explora
+automaticamente todas as sequ\^encias poss\'iveis at\'e o limite de desenrolamento.
+
+\subsection{Modelos Operacionais Implementados}
+O arquivo \texttt{esbmc\_models/network\_stubs.c} cont\'em modelos para nove
+fun\c{c}\~oes POSIX de rede:
+
+\begin{itemize}
+    \item \texttt{socket}: retorna descritor n\~ao-determin\'istico em $[3, 63]$.
+    \item \texttt{bind}, \texttt{listen}: retornam 0 (sem efeitos colaterais).
+    \item \texttt{accept}: retorna descritor de cliente n\~ao-determin\'istico.
+    \item \texttt{recv}: preenche at\'e $\min(\textit{len},\,256)$ bytes com
+          valores n\~ao-determin\'isticos e retorna comprimento em
+          $[0,\,\textit{len}]$.
+    \item \texttt{send}: retorna comprimento n\~ao-determin\'istico em
+          $[0,\,\textit{len}]$.
+    \item \texttt{close}: retorna 0.
+    \item \texttt{select}: retorna valor n\~ao-determin\'istico em
+          $[-1,\,\textit{nfds}]$; se positivo, preenche conjuntos \texttt{fd\_set}
+          com bits n\~ao-determin\'isticos, modelando qualquer subconjunto de
+          descritores prontos.
+    \item \texttt{poll}: para cada \texttt{pollfd}, preenche \texttt{revents}
+          com subconjunto n\~ao-determin\'istico dos eventos solicitados mais flags
+          de erro (\texttt{POLLERR}, \texttt{POLLHUP}).
+\end{itemize}
+
+Os modelos \texttt{select} e \texttt{poll} foram adicionados nesta fase do
+trabalho e cobrem o loop principal de eventos do broker, anteriormente
+inacess\'ivel \`a verifica\c{c}\~ao. Um cat\'alogo completo de APIs externas e seus
+status de modelagem est\'a em \texttt{docs/api\_catalog.md}.
 
 \section{Cat\'alogo de CVEs do broker Mosquitto}
 \label{sec:cves}
@@ -107,54 +315,65 @@ A Tabela~\ref{tab:cves} resume CVEs reproduzidos ou modelados. Vers\~oes atuais 
 \caption{CVEs do broker Mosquitto usados como or\'aculo de valida\c{c}\~ao}
 \label{tab:cves}
 \centering
-\begin{tabular}{llll}
+\scriptsize
+\begin{tabular}{p{1.6cm}p{2.0cm}lr}
 \hline
-CVE & Tipo & Corrigido em & Harness \\
+CVE & Tipo & CWE & Fix \\
 \hline
-2017-7651 & integer overflow & 1.4.15 & \texttt{remaining\_length} \\
-2017-7654 & memory leak & 1.4.15 & \texttt{connect\_memleak} \\
-2017-7650 & ACL bypass & 1.4.12 & \texttt{acl\_bypass} \\
-2023-3592 & memory leak & 2.0.16 & \texttt{will\_properties} \\
-2023-0809 & estado/protocolo & 2.0.16 & \texttt{initial\_packet} \\
-2023-28366 & memory leak QoS2 & 2.0.16 & \texttt{qos2\_dup} \\
-2024-3935 & double free & 2.0.19 & \texttt{bridge\_remap} \\
+2017-7651 & Integer Overflow  & 190 & 1.4.15 \\
+2017-7654 & Memory Leak       & 401 & 1.4.15 \\
+2017-7650 & ACL Bypass        & 284 & 1.4.12 \\
+2023-3592  & Memory Leak      & 401 & 2.0.16 \\
+2023-0809  & Excess Alloc     & 400 & 2.0.16 \\
+2023-28366 & Memory Leak QoS2 & 401 & 2.0.16 \\
+2024-3935  & Double Free      & 415 & 2.0.19 \\
 \hline
 \end{tabular}
 \end{table}
 
-\section{Resultados}
+\section{Resultados Parciais}
 \label{sec:resultados}
 
-A Tabela~\ref{tab:results} resume execu\c{c}\~oes com ESBMC~8.3 (logs em \texttt{harnesses/mosquitto/*.log}). \textbf{FAILED} na vers\~ao vulner\'avel indica que a propriedade de seguran\c{c}a foi violada (detec\c{c}\~ao desejada). \textbf{SUCCESSFUL} na vers\~ao corrigida ou em propriedades do c\'odigo 2.1.x indica conformidade no limite de desenrolamento.
+\subsection{Detec\c{c}\~ao de Vulnerabilidades}
+A Tabela~\ref{tab:results} resume execu\c{c}\~oes com ESBMC~8.3 (logs em
+\texttt{harnesses/mosquitto/*.log}). \textbf{FAILED} na vers\~ao vulner\'avel indica
+viola\c{c}\~ao da propriedade de seguran\c{c}a (detec\c{c}\~ao desejada).
+\textbf{SUCCESSFUL} na vers\~ao corrigida ou em propriedades do c\'odigo 2.1.x
+indica conformidade no limite de desenrolamento.
 
 \begin{table}[htbp]
-\caption{Resultados ESBMC nos harnesses (broker Mosquitto)}
+\caption{Resultados ESBMC: 21 harnesses (broker Mosquitto)}
 \label{tab:results}
 \centering
 \scriptsize
-\begin{tabular}{lll}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{2.6cm}p{2.0cm}cc}
 \hline
-Harness & Flags principais & Resultado \\
+Subsistema & Flags & Vuln. & Fix \\
 \hline
-\texttt{remaining\_length} (vuln.) & \texttt{--unsigned-overflow-check} & FAILED \\
-\texttt{connect\_memleak} (vuln.) & \texttt{--memory-leak-check} & FAILED (CWE-401) \\
-\texttt{read\_binary\_obo} (vuln.) & limites de \emph{array} & FAILED (CWE-193) \\
-\texttt{acl\_bypass} (v1.4.10) & \texttt{--unwind 32} & FAILED \\
-\texttt{acl\_bypass\_fixed} & \texttt{--unwind 32} & SUCCESSFUL \\
-\texttt{will\_properties} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
-\texttt{will\_properties\_fixed} & \texttt{--memory-leak-check} & SUCCESSFUL \\
-\texttt{initial\_packet} (vuln.) & --- & FAILED \\
-\texttt{initial\_packet\_fixed} & --- & SUCCESSFUL \\
-\texttt{qos2\_dup} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
-\texttt{qos2\_dup\_fixed} & \texttt{--unwind 8} & SUCCESSFUL \\
-\texttt{bridge\_remap} (vuln.) & \texttt{--memory-leak-check} & FAILED \\
-\texttt{bridge\_remap\_fixed} & \texttt{--unwind 16} & SUCCESSFUL \\
-\texttt{varint\_harness} / \texttt{max\_packet\_size} & \texttt{--unwind 8} & SUCCESSFUL \\
-\texttt{packet\_recv\_remaining\_length} (vuln.) & \texttt{network\_stubs.c} & FAILED \\
-\texttt{packet\_recv\_remaining\_length\_fixed} & \texttt{network\_stubs.c} & SUCCESSFUL \\
-\texttt{packet\_recv\_initial\_command} (vuln.) & \texttt{network\_stubs.c} & FAILED \\
-\texttt{packet\_recv\_initial\_command\_fixed} & \texttt{network\_stubs.c} & SUCCESSFUL \\
+\multicolumn{4}{l}{\textit{CVE -- harnesses isolados}} \\[0.2ex]
+\texttt{remaining\_len}    & uof           & FAIL & -- \\
+\texttt{connect\_memleak}  & mlc           & FAIL & -- \\
+\texttt{read\_binary\_obo} & bounds        & FAIL & -- \\
+\texttt{acl\_bypass}       & uw~32         & FAIL & SUCC \\
+\texttt{will\_properties}  & mlc           & FAIL & SUCC \\
+\texttt{initial\_packet}   & uw~4          & FAIL & SUCC \\
+\texttt{qos2\_dup}         & mlc           & FAIL & SUCC \\
+\texttt{bridge\_remap}     & mlc + uw~16   & FAIL & SUCC \\
 \hline
+\multicolumn{4}{l}{\textit{Propriedades MQTT~v5 (2.1.x)}} \\[0.2ex]
+\texttt{varint} / \texttt{max\_packet} & uw~8 & -- & SUCC \\
+\hline
+\multicolumn{4}{l}{\textit{Integra\c{c}\~ao (\texttt{network\_stubs.c})}} \\[0.2ex]
+\texttt{pkt\_recv\_rem\_len} & uof          & FAIL & SUCC \\
+\texttt{pkt\_recv\_init\_cmd} & uw~4        & FAIL & SUCC \\
+\hline
+\multicolumn{4}{l}{\textit{Nova falha -- Mosquitto 2.1.x}} \\[0.2ex]
+\texttt{proxy\_v2\_tlv}    & uof + assert  & FAIL & SUCC \\
+\hline
+\multicolumn{4}{p{8.5cm}}{\footnotesize
+uof=\texttt{--unsigned-overflow-check}; mlc=\texttt{--memory-leak-check};
+uw=\texttt{--unwind~N}; assert=\texttt{\_\_ESBMC\_assert} manual.} \\
 \end{tabular}
 \end{table}
 
@@ -162,17 +381,216 @@ Os quatro \emph{harnesses} de integra\c{c}\~ao (\texttt{packet\_recv\_*}) leem b
 
 O parser \texttt{packet\_\_read\_varint} do ramo 2.1.x satisfaz limites de \emph{Remaining Length} (m\'aximo quatro bytes e valor $\leq 2^{28}-1$), alinhado \`a especifica\c{c}\~ao MQTT~\cite{mqtt_v5_spec}.
 
-\section{Limita\c{c}\~oes e trabalho futuro}
+\subsection{Vulnerabilidade Encontrada no Mosquitto~2.1.x}
+\label{sec:proxy_v2_vuln}
+
+Aplicando a metodologia ao c\'odigo mais recente do Mosquitto (master,
+\texttt{v2.1.2-132-ga609c263}, junho de 2026), identificou-se uma falha de
+\emph{integer underflow} (CWE-191) na fun\c{c}\~ao \texttt{read\_tlv\_ssl}
+em \texttt{src/proxy\_v2.c}, que implementa o parser de TLVs do PROXY
+Protocol~v2 para conex\~oes TLS.
+
+\subsubsection*{Descri\c{c}\~ao da falha}
+A fun\c{c}\~ao itera sobre sub-TLVs com o campo \texttt{len} (\texttt{uint16\_t})
+representando os bytes restantes da SSL TLV. Em cada itera\c{c}\~ao, as
+verifica\c{c}\~oes de limite presentes validam \texttt{tlv\_len} contra o
+\emph{buffer global} (\texttt{proxy.len~$-$~proxy.pos}), mas n\~ao contra
+o espa\c{c}o restante da SSL TLV (\texttt{len}). A opera\c{c}\~ao
+
+\begin{verbatim}
+len = (uint16_t)(len - (3 + tlv_len));
+\end{verbatim}
+
+\noindent \'e avaliada em aritm\'etica \texttt{int} com sinal (por promo\c{c}\~ao
+impl\'icita do C). Se \texttt{3~+~tlv\_len~>~len}, o resultado \'e um inteiro
+negativo v\'alido que, ao ser truncado para \texttt{uint16\_t}, assume valor
+de at\'e 65.535, fazendo o loop iterar al\'em dos limites declarados.
+
+\subsubsection*{Por que os checadores autom\'aticos n\~ao detectam}
+Este \'e o aspecto metodologicamente mais relevante. As \emph{flags}
+autom\'aticas do ESBMC n\~ao detectam a falha sem uma asser\c{c}\~ao expl\'icita:
+\begin{itemize}
+    \item \texttt{--unsigned-overflow-check}: verifica opera\c{c}\~oes sobre
+          tipos \emph{unsigned}; aqui a subtrac\c{c}\~ao \'e avaliada como
+          \texttt{int} com sinal (promo\c{c}\~ao impl\'icita), logo a
+          \emph{flag} n\~ao \'e acionada.
+    \item \texttt{--overflow-check}: o resultado $-4$ \'e um \texttt{int}
+          v\'alido; n\~ao h\'a estouro com sinal.
+    \item Checadores de mem\'oria: os acessos ao buffer passam nas
+          verifica\c{c}\~oes contra o buffer global.
+\end{itemize}
+A detec\c{c}\~ao requer uma asser\c{c}\~ao que expresse o \emph{invariante de
+dom\'inio}: \texttt{(3~+~tlv\_len)~$\leq$~len} deve ser verdade antes da
+subtrac\c{c}\~ao --- propriedade que um especialista em parsers TLV saberia
+especificar e que o harness de verifica\c{c}\~ao formal torna autom\'atica.
+
+\subsubsection*{Por que o fuzzer existente n\~ao detectou}
+O commit \texttt{23c918ee} (janeiro de 2026) adicionou
+\texttt{fuzzing/broker/broker\_fuzz\_proxy\_v2.cpp}, um \emph{fuzzer} libFuzzer
+especificamente para a mesma fun\c{c}\~ao. Contudo, \emph{fuzzers} baseados em
+cobertura detectam \emph{crashes} e viola\c{c}\~oes de \emph{sanitizers}
+(AddressSanitizer, UBSan). A falha n\~ao causa \emph{crash}: a conex\~ao \'e
+rejeitada normalmente ap\'os as itera\c{c}\~oes extras. Al\'em disso, a
+trunca\c{c}\~ao \texttt{(uint16\_t)(int\_negativo)} \'e comportamento definido
+em~C e n\~ao \'e sinalizada pelo UBSan. Isso demonstra concretamente a
+complementaridade entre \emph{fuzzing} e verifica\c{c}\~ao formal com
+asser\c{c}\~oes de dom\'inio.
+
+\subsubsection*{Contraexemplo e corre\c{c}\~ao}
+O harness \texttt{proxy\_v2\_tlv\_harness.c} modela \texttt{ssl\_tlv\_len} e
+\texttt{tlv\_len} como entradas simb\'olicas e insere a asser\c{c}\~ao de
+dom\'inio antes da subtrac\c{c}\~ao. O ESBMC encontrou o seguinte
+contraexemplo:
+\begin{itemize}
+    \item \texttt{ssl\_tlv\_len~=~256} e \texttt{len~=~251} (ap\'os subtrair
+          os 5 bytes do cabe\c{c}alho SSL obrigat\'orio);
+    \item \texttt{tlv\_len~=~253} (passa na verifica\c{c}\~ao do buffer global
+          pois $253 \leq 492$);
+    \item \texttt{3~+~253~=~256~>~251}: viola\c{c}\~ao da propriedade;
+          \texttt{len} sofre wraparound para \textbf{65.531}.
+\end{itemize}
+A vers\~ao corrigida adiciona
+\texttt{if((uint32\_t)3+tlv\_len>(uint32\_t)len)~return~MOSQ\_ERR\_INVAL}
+antes da subtrac\c{c}\~ao; o ESBMC confirma com
+\emph{VERIFICATION~SUCCESSFUL} em 0,49\,s. O ataque requer
+\texttt{proxy\_protocol~true} (t\'ipico atr\'as de balanceador de carga).
+O resultado ser\'a reportado ao projeto Eclipse pelo processo de
+divulga\c{c}\~ao respons\'avel (\emph{coordinated vulnerability disclosure}).
+
+\subsection{Desempenho}
+A Tabela~\ref{tab:perf} registra tempo de verifica\c{c}\~ao (\emph{wall-clock}) e pico
+de mem\'oria de trabalho coletados pelo script \texttt{run\_bench.ps1}, em uma
+m\'aquina Windows~11 com processador Intel Core i7 e ESBMC~8.3 (solucionador z3).
+
+\begin{table}[htbp]
+\caption{Desempenho dos harnesses no ESBMC~8.3}
+\label{tab:perf}
+\centering
+\scriptsize
+\begin{tabular}{lcrr}
+\hline
+Harness & Resultado & Tempo (s) & Mem.\ (MB) \\
+\hline
+\texttt{remaining\_length} (vuln.) & FAILED & 1,01 & 97 \\
+\texttt{connect\_memleak} (vuln.) & FAILED & 1,46 & 166 \\
+\texttt{read\_binary\_obo} (vuln.) & FAILED & 0,64 & 81 \\
+\texttt{acl\_bypass} (vuln., unwind~32) & FAILED & 87,6 & 2.220 \\
+\texttt{acl\_bypass} (fixed, unwind~32) & SUCCESSFUL & 23,1 & 1.996 \\
+\texttt{will\_properties} (vuln.) & FAILED & 1,02 & 98 \\
+\texttt{will\_properties} (fixed) & SUCCESSFUL & 0,63 & 76 \\
+\texttt{initial\_packet} (vuln.) & FAILED & 0,63 & 95 \\
+\texttt{initial\_packet} (fixed) & SUCCESSFUL & 0,63 & 73 \\
+\texttt{qos2\_dup} (vuln.) & FAILED & 1,25 & 119 \\
+\texttt{qos2\_dup} (fixed) & SUCCESSFUL & 3,73 & 133 \\
+\texttt{bridge\_remap} (vuln.) & FAILED & 0,98 & 78 \\
+\texttt{bridge\_remap} (fixed) & SUCCESSFUL & 0,63 & 78 \\
+\texttt{varint} / \texttt{max\_packet\_size} & SUCCESSFUL & 0,64 & 99 \\
+\texttt{pkt\_recv\_rem\_len} (vuln.) & FAILED & 0,62 & 77 \\
+\texttt{pkt\_recv\_rem\_len} (fixed) & SUCCESSFUL & 0,62 & 79 \\
+\texttt{pkt\_recv\_init\_cmd} (vuln.) & FAILED & 0,62 & 77 \\
+\texttt{pkt\_recv\_init\_cmd} (fixed) & SUCCESSFUL & 0,63 & 98 \\
+\texttt{proxy\_v2\_tlv} (2.1.x, vuln.) & FAILED & 0,86 & 73 \\
+\texttt{proxy\_v2\_tlv} (fixed) & SUCCESSFUL & 0,49 & 73 \\
+\hline
+\end{tabular}
+\end{table}
+
+Observa-se que 19 dos 21 harnesses concluem em menos de 4\,s com consumo de
+mem\'oria abaixo de 170\,MB. O caso \texttt{acl\_bypass} (CVE-2017-7650) \'e
+exce\c{c}\~ao: o limite de desenrolamento elevado (\texttt{--unwind~32}) gera uma
+f\'ormula SMT significativamente maior, resultando em 87,6\,s e pico de
+2,2\,GB, evidenciando a depend\^encia cl\'assica entre profundidade de busca e
+custo computacional do BMC.
+
+\section{Limita\c{c}\~oes e Trabalho Futuro}
 \label{sec:limitacoes}
 
-A an\'alise \'e \emph{context-bounded}: o desenrolamento limita loops e pode omitir caminhos mais profundos. CVEs que envolvem sequ\^encias longas de pacotes (ex.: CVE-2024-8376) exigem modelagem de estado de sess\~ao e APIs \texttt{select}/\texttt{poll}, ainda n\~ao integradas ao broker completo.
+A an\'alise \'e \emph{context-bounded}: o desenrolamento limita la\c{c}os e pode
+omitir caminhos mais profundos. CVEs que envolvem sequ\^encias longas de pacotes
+(ex.: CVE-2024-8376) exigem modelagem de estado de sess\~ao completa, ainda n\~ao
+implementada.
 
-Foram implementados \emph{operational models} m\'inimos (\texttt{network\_stubs.c}) e quatro \emph{harnesses} de integra\c{c}\~ao com \texttt{recv}. O pr\'oximo passo \'e incorporar modelos completos (\texttt{socket\_lib.c}) \`a biblioteca c2goto do ESBMC e verificar trechos reais de \texttt{packet\_mosq.c} do Mosquitto, medindo tempo e mem\'oria em rela\c{c}\~ao aos harnesses isolados.
+Nesta fase, foram implementados modelos operacionais para nove fun\c{c}\~oes POSIX de
+rede e constru\'idos 21 harnesses (17 isolados e 4 de integra\c{c}\~ao), incluindo
+dois novos harnesses direcionados ao c\'odigo 2.1.x que identificaram uma falha
+(Sec.~\ref{sec:proxy_v2_vuln}). O pr\'oximo passo \'e reportar a falha ao projeto
+Eclipse e incorporar os modelos \`a biblioteca \texttt{c2goto} do ESBMC.
 
-\section{Conclus\~ao}
+Modelos para \texttt{getaddrinfo}, \texttt{epoll\_*} e para as APIs TLS/SSL
+(\texttt{SSL\_read}, \texttt{SSL\_write}) permanecem como trabalho futuro para
+a vers\~ao final do trabalho.
+
+A Tabela~\ref{tab:status} resume o estado atual do trabalho.
+
+\begin{table}[htbp]
+\caption{Status das atividades do trabalho}
+\label{tab:status}
+\centering
+\small
+\begin{tabular}{lp{0.58\columnwidth}}
+\hline
+Status & Atividade \\
+\hline
+Conclu\'ido & Cat\'alogo de APIs; 9 modelos operacionais; 21 harnesses
+              (7 CVEs + 1 vuln.\ 2.1.x, 2 propriedades, 4 integra\c{c}\~ao);
+              benchmark; relat\'orio e slides. \\
+Em andamento & Incorpora\c{c}\~ao dos modelos ao \texttt{c2goto} do ESBMC;
+              verifica\c{c}\~ao de m\'odulos reais do Mosquitto. \\
+Pendente & Modelos para \texttt{getaddrinfo}, \texttt{epoll},
+           TLS/SSL; harness CVE-2024-8376; divulga\c{c}\~ao respons\'avel da
+           falha em \texttt{proxy\_v2.c}; defesa final. \\
+\hline
+\end{tabular}
+\end{table}
+
+% -----------------------------------------------------------------------
+\section{Metodologia e Cronograma}
+\label{sec:cronograma}
+
+O trabalho segue uma metodologia de pesquisa experimental com estudo de caso: a
+solu\c{c}\~ao proposta (modelos operacionais + harnesses) \'e avaliada por sua
+capacidade de reproduzir CVEs reais e verificar propriedades do Mosquitto. A
+Tabela~\ref{tab:cronograma} apresenta as etapas planejadas.
+
+\begin{table}[htbp]
+\caption{Cronograma do trabalho}
+\label{tab:cronograma}
+\centering
+\small
+\begin{tabular}{clc}
+\hline
+\# & Atividade & Per\'iodo \\
+\hline
+1 & Pesquisa bibliogr\'afica e levantamento de CVEs & Mar--Abr/26 \\
+2 & Levantamento de APIs e harnesses isolados & Mar--Mai/26 \\
+3 & Implementa\c{c}\~ao de operational models & Abr--Mai/26 \\
+4 & Harnesses de integra\c{c}\~ao (recv / select / poll) & Mai/26 \\
+5 & Experimentos e coleta de m\'etricas & Mai--Jun/26 \\
+6 & Relat\'orio e defesa intermedi\'aria & Jun/26 \\
+7 & Refinamento e defesa final & Jul/26 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Conclus\~ao Parcial}
 \label{sec:conclusao}
 
-Este trabalho demonstra que o ESBMC detecta padr\~oes de vulnerabilidades reais do Eclipse Mosquitto---incluindo CVEs de 2017 e de 2023--2024---em harnesses isolados e em harnesses de integra\c{c}\~ao com \texttt{recv}, e que c\'odigo recente do parser MQTT satisfaz propriedades de seguran\c{c}a verificadas. A extens\~ao com modelos POSIX completos no ESBMC permanece como passo para verifica\c{c}\~ao do broker completo.
+Os resultados parciais demonstram que o ESBMC detecta padr\~oes de
+vulnerabilidades reais do Eclipse Mosquitto, incluindo CVEs de 2017 e de
+2023--2024, em harnesses isolados e em harnesses de integra\c{c}\~ao com
+\texttt{recv()}. Foram implementados modelos operacionais para nove fun\c{c}\~oes
+POSIX de rede e constru\'idos 21 harnesses. A avalia\c{c}\~ao de desempenho mostra
+que 19 dos 21 harnesses concluem em menos de 4\,s com consumo de mem\'oria abaixo
+de 170\,MB; o \'unico caso com custo elevado (\texttt{acl\_bypass},
+87,6\,s / 2,2\,GB) \'e atribu\'ido ao desenrolamento de 32 n\'iveis.
+
+Destaca-se que a metodologia foi aplicada ao c\'odigo mais recente do Mosquitto
+(2.1.x), identificando uma falha de \emph{integer underflow} em
+\texttt{src/proxy\_v2.c} ainda n\~ao reportada (Sec.~\ref{sec:proxy_v2_vuln}),
+demonstrando a capacidade da abordagem de revelar vulnerabilidades desconhecidas.
+As etapas seguintes incluem a divulga\c{c}\~ao respons\'avel da falha, a
+incorpora\c{c}\~ao dos modelos \`a biblioteca \texttt{c2goto} do ESBMC e a
+verifica\c{c}\~ao de m\'odulos reais com o broker parcialmente montado.
 
 \bibliographystyle{IEEEtran}
 \bibliography{refs}
