@@ -36,12 +36,22 @@ $env:ESBMC = "..\..\tools\esbmc\bin\esbmc.exe"   # a partir desta pasta
 | `packet_recv_remaining_length_harness_fixed.c` | fix 7651 via `recv` | `--unwind 8` + `network_stubs.c` | SUCCESSFUL |
 | `packet_recv_initial_command_harness.c` | CVE-2023-0809 via `recv` | `--unwind 4` + `network_stubs.c` | FAILED |
 | `packet_recv_initial_command_harness_fixed.c` | fix 0809 via `recv` | `--unwind 4` + `network_stubs.c` | SUCCESSFUL |
+| `proxy_v2_tlv_harness.c` | underflow PROXY v2 SSL TLV (2.1.x) | `--unsigned-overflow-check` | FAILED |
+| `proxy_v2_tlv_harness_fixed.c` | fix PROXY v2 | `--unsigned-overflow-check` | SUCCESSFUL |
 
 Logs gerados: `*.log` neste diretório.
 
+## Benchmark (tempo e memória)
+
+```powershell
+.\run_bench.ps1
+```
+
+Gera `bench_results.csv` com tempo de wall-clock e pico de memória por harness.
+
 ## Harnesses de integração (operational models)
 
-Estes harnesses leem bytes **via `recv()`** em vez de buffers fixos. Compilam junto com `esbmc_models/network_stubs.c`, que modela a rede com bytes não-determinísticos (entrada simbólica do atacante). Header compartilhado: `esbmc_models/network_common.h`.
+Estes harnesses leem bytes **via `recv()`** em vez de buffers fixos. Compilam junto com `esbmc_models/network_stubs.c`, que modela `socket`, `recv`, `send`, `select` e `poll` com bytes não-determinísticos (entrada simbólica do atacante). Header compartilhado: `esbmc_models/network_common.h`.
 
 ## Metodologia
 

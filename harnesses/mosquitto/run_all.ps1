@@ -68,5 +68,11 @@ Invoke-Harness "packet_recv_initial_command_fixed" `
     "harnesses\mosquitto\packet_recv_initial_command_harness_fixed.c" `
     $u4 `
     -ExtraSources $netStubs
+Invoke-Harness "proxy_v2_tlv_vulnerable" `
+    "harnesses\mosquitto\proxy_v2_tlv_harness.c" `
+    @("--unsigned-overflow-check")
+Invoke-Harness "proxy_v2_tlv_fixed" `
+    "harnesses\mosquitto\proxy_v2_tlv_harness_fixed.c" `
+    @("--unsigned-overflow-check")
 
 Write-Host "Done. Logs in $logDir"
