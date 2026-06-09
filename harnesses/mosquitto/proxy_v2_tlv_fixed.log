@@ -1,0 +1,20 @@
+Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+Parsing C:\Dev\Work\FormalVerification\harnesses\mosquitto\proxy_v2_tlv_harness_fixed.c
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.397s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Symex completed in: 0.001s (36 assignments)
+Caching time: 0.000s (removed 1 assertions)
+Slicing time: 0.000s (removed 14 assignments)
+Generated 10 VCC(s), 9 remaining after simplification (21 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.001s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.007s
+BMC program time: 0.013s
+System.Management.Automation.RemoteException
+VERIFICATION SUCCESSFUL
+ESBMC version 8.3.0 64-bit x86_64 windows

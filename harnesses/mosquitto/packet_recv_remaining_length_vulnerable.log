@@ -1,0 +1,145 @@
+﻿Command: C:\Dev\Work\FormalVerification\tools\esbmc\bin\esbmc.exe harnesses\mosquitto\packet_recv_remaining_length_harness.c esbmc_models\network_stubs.c --unwind 8 --no-unwinding-assertions --unsigned-overflow-check
+
+ESBMC version 8.3.0 64-bit x86_64 windows
+Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
+Parsing harnesses\mosquitto\packet_recv_remaining_length_harness.c
+Parsing esbmc_models\network_stubs.c
+In file included from harnesses\mosquitto\packet_recv_remaining_length_harness.c:1:
+esbmc_models\network_stubs.c:124:5: warning: external function 'select' declared with incompatible types in different translation units ('int (int, fd_set_stub *, fd_set_stub *, fd_set_stub *, struct timeval_stub *)' vs. 'int (int, fd_set *, fd_set *, fd_set *, struct timeval *)') [-Wodr]
+  124 | int select(int nfds, fd_set_stub *readfds, fd_set_stub *writefds,
+      |     ^
+harnesses\mosquitto\../../esbmc_models/network_common.h:39:5: note: declared here with type 'int (int, fd_set *, fd_set *, fd_set *, struct timeval *)'
+   39 | int select(int nfds, fd_set *readfds, fd_set *writefds,
+      |     ^
+In file included from harnesses\mosquitto\packet_recv_remaining_length_harness.c:1:
+esbmc_models\network_stubs.c:173:5: warning: external function 'poll' declared with incompatible types in different translation units ('int (struct pollfd_stub *, unsigned int, int)' vs. 'int (struct pollfd *, unsigned int, int)') [-Wodr]
+  173 | int poll(struct pollfd_stub *fds, unsigned int nfds, int timeout)
+      |     ^
+harnesses\mosquitto\../../esbmc_models/network_common.h:56:5: note: declared here with type 'int (struct pollfd *, unsigned int, int)'
+   56 | int poll(struct pollfd *fds, unsigned int nfds, int timeout);
+      |     ^
+Converting
+Generating GOTO Program
+GOTO program creation time: 0.425s
+GOTO program processing time: 0.000s
+Starting Bounded Model Checking
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 1   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 2   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 3   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 4   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 5   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 6   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Unwinding loop 8 iteration 7   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
+Not unwinding loop 8 iteration 8   file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 59 column 14 function read_remaining_length_vulnerable
+Symex completed in: 0.012s (441 assignments)
+Caching time: 0.000s (removed 1 assertions)
+Slicing time: 0.000s (removed 225 assignments)
+Generated 74 VCC(s), 43 remaining after simplification (215 assignments)
+No solver specified; defaulting to z3
+Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
+Encoding to solver time: 0.000s
+Solving with solver Z3 v4.13.3
+Runtime decision procedure: 0.012s
+Building error trace
+
+[Counterexample]
+
+
+State 2 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 47 column 5 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+  byte = 0 (00000000)
+
+State 3 file esbmc_models\network_stubs.c line 75 column 9 function recv thread 0
+----------------------------------------------------
+  p[(signed long long int)i] = 128 (10000000)
+
+State 5 file esbmc_models\network_stubs.c line 77 column 5 function recv thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 7 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 29 column 5 function read_byte thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 10 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+  remaining_length = 0 (00000000 00000000 00000000 00000000)
+
+State 13 file esbmc_models\network_stubs.c line 75 column 9 function recv thread 0
+----------------------------------------------------
+  p[(signed long long int)i] = 128 (10000000)
+
+State 15 file esbmc_models\network_stubs.c line 77 column 5 function recv thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 17 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 29 column 5 function read_byte thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 20 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+  remaining_length = 0 (00000000 00000000 00000000 00000000)
+
+State 23 file esbmc_models\network_stubs.c line 75 column 9 function recv thread 0
+----------------------------------------------------
+  p[(signed long long int)i] = 128 (10000000)
+
+State 25 file esbmc_models\network_stubs.c line 77 column 5 function recv thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 27 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 29 column 5 function read_byte thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 30 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+  remaining_length = 0 (00000000 00000000 00000000 00000000)
+
+State 33 file esbmc_models\network_stubs.c line 75 column 9 function recv thread 0
+----------------------------------------------------
+  p[(signed long long int)i] = 128 (10000000)
+
+State 35 file esbmc_models\network_stubs.c line 77 column 5 function recv thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 37 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 29 column 5 function read_byte thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 40 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+  remaining_length = 0 (00000000 00000000 00000000 00000000)
+
+State 43 file esbmc_models\network_stubs.c line 75 column 9 function recv thread 0
+----------------------------------------------------
+  p[(signed long long int)i] = 17 (00010001)
+
+State 45 file esbmc_models\network_stubs.c line 77 column 5 function recv thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 47 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 29 column 5 function read_byte thread 0
+----------------------------------------------------
+  n = 1 (00000000 00000000 00000000 00000001)
+
+State 48 file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable thread 0
+----------------------------------------------------
+Violated property:
+  file harnesses\mosquitto\packet_recv_remaining_length_harness.c line 56 column 9 function read_remaining_length_vulnerable
+  arithmetic overflow on mul
+  CWE: CWE-190, CWE-191
+  !overflow("*", (unsigned int)byte & 127, remaining_mult)
+
+
+VERIFICATION FAILED
