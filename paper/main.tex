@@ -11,6 +11,24 @@
 \usepackage{xcolor}
 \usepackage{url}
 \usepackage{booktabs}
+\usepackage{listings}
+\lstset{
+  language=C,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\bfseries,
+  commentstyle=\itshape\color{gray},
+  breaklines=true,
+      captionpos=b,
+  frame=single,
+  framerule=0.4pt,
+      xleftmargin=0pt,
+      xrightmargin=0pt,
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=4pt,
+  showstringspaces=false,
+  morekeywords={uint16_t,uint32_t,uint8_t,bool}
+}
 
 \renewcommand{\IEEEkeywordsname}{Palavras-chave}
 
@@ -395,14 +413,25 @@ A fun\c{c}\~ao itera sobre sub-TLVs com o campo \texttt{len} (\texttt{uint16\_t}
 representando os bytes restantes da SSL TLV. Em cada itera\c{c}\~ao, as
 verifica\c{c}\~oes de limite presentes validam \texttt{tlv\_len} contra o
 \emph{buffer global} (\texttt{proxy.len~$-$~proxy.pos}), mas n\~ao contra
-o espa\c{c}o restante da SSL TLV (\texttt{len}). A opera\c{c}\~ao
+o espa\c{c}o restante da SSL TLV (\texttt{len}). O trecho cr\'itico de
+\texttt{src/proxy\_v2.c} (revis\~ao \texttt{a609c263}) \'e mostrado na
+Listagem~\ref{lst:bug}:
 
-\begin{verbatim}
-len = (uint16_t)(len - (3 + tlv_len));
-\end{verbatim}
+\begin{lstlisting}[caption={Trecho vulner\'avel em \texttt{read\_tlv\_ssl} (proxy\_v2.c)},label=lst:bug,escapechar=|]
+while(len > 0){
+  /* OK: verifica vs. buffer global */
+  if(tlv_len > proxy.len - proxy.pos)
+    return MOSQ_ERR_INVAL;
 
-\noindent \'e avaliada em aritm\'etica \texttt{int} com sinal (por promo\c{c}\~ao
-impl\'icita do C). Se \texttt{3~+~tlv\_len~>~len}, o resultado \'e um inteiro
+  /* BUG: sem verificacao contra len */
+  /* Falta: if(3+tlv_len > len) ...  */
+  len = (uint16_t)(len-(3+tlv_len)); |\label{line:bug}|
+}
+\end{lstlisting}
+
+\noindent A opera\c{c}\~ao na linha~\ref{line:bug} \'e avaliada em aritm\'etica
+\texttt{int} com sinal (por promo\c{c}\~ao impl\'icita do C). Se
+\texttt{3~+~tlv\_len~>~len}, o resultado \'e um inteiro
 negativo v\'alido que, ao ser truncado para \texttt{uint16\_t}, assume valor
 de at\'e 65.535, fazendo o loop iterar al\'em dos limites declarados.
 
@@ -449,9 +478,18 @@ contraexemplo:
     \item \texttt{3~+~253~=~256~>~251}: viola\c{c}\~ao da propriedade;
           \texttt{len} sofre wraparound para \textbf{65.531}.
 \end{itemize}
-A vers\~ao corrigida adiciona
-\texttt{if((uint32\_t)3+tlv\_len>(uint32\_t)len)~return~MOSQ\_ERR\_INVAL}
-antes da subtrac\c{c}\~ao; o ESBMC confirma com
+A vers\~ao corrigida adiciona uma guarda expl\'icita antes da subtrac\c{c}\~ao
+(Listagem~\ref{lst:fix}):
+
+\begin{lstlisting}[caption={Corre\c{c}\~ao proposta para \texttt{read\_tlv\_ssl}},label=lst:fix]
+/* Verificar vs. espaco restante da SSL TLV */
+if(3u + tlv_len > len)
+  return MOSQ_ERR_INVAL;
+
+len = (uint16_t)(len - (3 + tlv_len)); /* ok */
+\end{lstlisting}
+
+\noindent O ESBMC confirma com
 \emph{VERIFICATION~SUCCESSFUL} em 0,49\,s. O ataque requer
 \texttt{proxy\_protocol~true} (t\'ipico atr\'as de balanceador de carga).
 O resultado ser\'a reportado ao projeto Eclipse pelo processo de

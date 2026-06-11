@@ -160,9 +160,6 @@
     {\tiny uof=\texttt{--unsigned-overflow-check}; mlc=\texttt{--memory-leak-check}; uw=\texttt{--unwind}; assert=\texttt{\_\_ESBMC\_assert} manual}
 \end{frame}
 
-% ==================================================================
-\section{Nova Vulnerabilidade (Mosquitto 2.1.x)}
-
 \begin{frame}{Resultados: Desempenho (ESBMC~8.3, z3)}
     \small
     \begin{tabular}{lcrr}
@@ -187,6 +184,9 @@
     \small 19/21 harnesses concluem em $<$~4\,s e $<$~170\,MB.
     \texttt{acl\_bypass} \'e outlier (unwind~32).
 \end{frame}
+
+% ==================================================================
+\section{Nova Vulnerabilidade (Mosquitto 2.1.x)}
 
 \begin{frame}{Vulnerabilidade Encontrada no Mosquitto~2.1.x (1/2)}
     \begin{block}{Falha em \texttt{src/proxy\_v2.c} -- \texttt{read\_tlv\_ssl} (CWE-191)}

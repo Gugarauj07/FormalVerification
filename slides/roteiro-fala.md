@@ -49,28 +49,56 @@ Validamos a metodologia nos CVEs conhecidos. O passo seguinte foi aplicar a mesm
 
 ## Slide — Vulnerabilidade (1/2)
 
-A falha está em proxy_v2.c, função read_tlv_ssl — parser de sub-TLVs SSL do PROXY Protocol v2.
+*(Apontar o bloco de cima do slide)*
 
-Contexto: quando o Mosquitto fica atrás de um load balancer com uma configuracao especifica, chega um cabeçalho extra antes do MQTT, com blocos aninhados no formato TLV — tipo, tamanho, valor. Não é configuração padrão.
+Aqui está o achado novo. Arquivo `proxy_v2.c`, função `read_tlv_ssl`. É o pedaço do Mosquitto que lê um cabeçalho especial chamado PROXY Protocol v2.
 
-O código precisa saber quanto ainda falta ler dentro do bloco SSL. No contraexemplo do slide, sobram 251 bytes. Chega um sub-bloco que declara 253 bytes de conteúdo.
+Quando isso importa? Só quando o broker está atrás de um load balancer e a opção `proxy_protocol true` está ligada no `mosquitto.conf`. Não é o cenário padrão — a maioria das instalações não usa. 
 
-Antes de consumir, o Mosquitto pergunta só uma coisa: isso cabe no pacote inteiro? Cabe — o buffer tem 500 bytes. Mas não pergunta: cabe nos 251 que ainda restam? Subtrai mesmo assim. O contador estoura e vira 65531.
+O que o código faz, em termos simples: dentro desse cabeçalho tem um bloco SSL, e dentro dele podem vir blocos menores. O programa guarda num contador — a variável `len` no slide — quantos bytes **ainda faltam ler dentro desse bloco SSL**.
 
-O ESBMC encontrou um contraexemplo em menos de 1 segundo — os valores estão no slide. Harness vulnerável: FAILED. Com a guarda if (3 + tlv_len > len) return erro: SUCCESSFUL.
+O bug está nessa linha que o slide destaca: o programa **subtrai** do contador o tamanho do bloco menor **sem checar antes** se aquele bloco realmente cabe no que ainda restava. Falta uma validação simples: “isso cabe no que sobrou?”
 
-Sobre impacto: severidade baixa — config específica, conexão acaba rejeitada, sem RCE demonstrado. Mesmo assim é falha real, CWE-191. Vamos reportar ao Eclipse em divulgação coordenada.
+*(Apontar a tabela “Contraexemplo ESBMC”)*
+
+O ESBMC montou um exemplo concreto em menos de 1 segundo.
+
+Primeira linha: o bloco SSL tem tamanho total 256. Depois de ler o cabeçalho fixo de 5 bytes, sobram **251 bytes** no contador — é o `len` igual a 251 que aparece aí.
+
+Segunda linha: chega um bloco interno que declara **253 bytes** de conteúdo — o `tlv_len` igual a 253. O Mosquitto pergunta: “253 cabe no pacote inteiro?” Cabe — o buffer geral tem até 500 bytes, então **passa** no check que está na tabela.
+
+O problema é outro: 253 é **maior** que os 251 que ainda restavam **dentro** do bloco SSL. Mas o código não faz essa segunda pergunta. Ele subtrai mesmo assim — na prática, tira 256 de 251, o resultado fica **negativo**. Só que o contador não guarda negativo: ele converte esse valor e acaba virando **65.531**. O programa então acha que ainda faltam esses de bytes para ler, quando na verdade não deveria.
+
+*(Apontar FAILED / SUCCESSFUL)*
+
+Rodamos o harness com o comportamento atual: **VERIFICATION FAILED** — o ESBMC provou que esse cenário é possível.
+
+Quando colocamos no harness a correção que falta — basicamente, rejeitar o pacote se o bloco interno for maior que o que sobrou — passa para **SUCCESSFUL**.
+
+*(Apontar a nota de rodapé)*
+
+Impacto: severidade baixa. A conexão acaba sendo rejeitada; Vamos reportar ao Eclipse em divulgação coordenada.
 
 ---
-
 ## Slide — Vulnerabilidade (2/2)
 
-Por que isso não apareceu com fuzzing nem com as flags automáticas do ESBMC?
+Agora a pergunta natural: se o bug existe, por que fuzzing e as checagens automáticas do ESBMC não pegaram sozinhas?
 
-Porque não dá crash. A subtração acontece em aritmética int com sinal; o resultado negativo é válido até o cast para uint16_t. Por isso --unsigned-overflow-check não dispara, --overflow-check também não, e UBSan não acusa — o cast de inteiro negativo para uint16_t é comportamento definido em C.
+Resposta curta: **porque o programa não quebra**. Não tem crash, não tem corrupção de memória óbvia. O que acontece eh que o broker lê errado, o contador fica inconsistente, mas no fim a conexão é recusada e a execução termina “normalmente”.
 
-O fuzzer que o próprio Mosquitto adicionou para esse arquivo em janeiro de 2026 — commit 23c918ee — também não encontrou. Sem crash, sem sanitizer violado, o fuzzer segue em frente.
+Por isso as flags automáticas do ESBMC não ajudam aqui:
 
-O que funcionou foi escrever a regra correta do protocolo como asserção: 3 + tlv_len tem que ser menor ou igual a len antes da subtração. O ESBMC não inventa essa regra — nós especificamos com base na leitura do código. Ele só pergunta: existe alguma entrada que viola? Existe, e devolve o contraexemplo.
+- `--unsigned-overflow-check` — não dispara, porque a subtração problemática não acontece direto em tipo unsigned.
+- `--overflow-check` — também não, porque o resultado intermediário ainda é um número inteiro válido
 
-Esse é o ponto metodológico: fuzzing acha crashes; verificação formal com invariante acha falhas lógicas que não crasham. Os resultados anteriores mostram que a abordagem funciona nos CVEs antigos; aqui mostra que também serve para achar problema novo no código atual.
+*(Apontar a nota do commit na parte de baixo)*
+
+Inclusive o próprio Mosquitto ganhou um fuzzer para esse arquivo em janeiro de 2026 — commit `23c918ee` — e mesmo assim **não** achou esse caso.
+
+*(Apontar o bloco “Por que o ESBMC com harness detectou”)*
+
+O que a gente fez de diferente foi escrever no harness a **regra que o código deveria obedecer**, usando `__ESBMC_assert`.
+
+a regra é: “antes de subtrair o tamanho do bloco interno do contador, esse bloco tem que caber no que ainda restava.”
+
+Aí a ferramenta pergunta: existe alguma combinação de tamanhos que viola essa regra? Existe — e é exatamente o contraexemplo da tabela do slide anterior.
