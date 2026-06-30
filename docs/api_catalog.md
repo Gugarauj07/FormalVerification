@@ -15,8 +15,8 @@
 | `connect` | bridges outbound | Idem | stub trivial (retorna 0) |
 | `send` / `recv` / `write` / `read` | I/O de pacotes MQTT | Traces não reproduzíveis | **modelado** |
 | `select` / `poll` | loop principal do broker | Bloqueio / eventos abstratos | **modelado** (`network_stubs.c`) |
-| `epoll_*` | loop principal (Linux) | Bloqueio / eventos abstratos | pendente |
-| `getaddrinfo` / `getnameinfo` | resolução DNS | Não determinístico | pendente |
+| `epoll_*` | loop principal (Linux) | Bloqueio / eventos abstratos | trabalho futuro |
+| `getaddrinfo` / `getnameinfo` | resolução DNS | Não determinístico | trabalho futuro |
 
 ## APIs de sistema e tempo
 
@@ -26,7 +26,7 @@
 | `clock_gettime` / `time` | keepalive, expiração |
 | `signal` / `daemon` | modo serviço |
 
-## TLS (WITH_TLS)
+## TLS (WITH_TLS) -- trabalho futuro
 
 `SSL_*`, `TLS_*` — exigem modelo criptográfico ou stub que abstrai handshakes.
 
@@ -60,6 +60,6 @@ Compilação: `esbmc harness.c esbmc_models/network_stubs.c --unwind N`.
 | `proxy_v2_tlv_harness.c` | underflow uint16 em `read_tlv_ssl` | FAILED |
 | `proxy_v2_tlv_harness_fixed.c` | fix proposto | SUCCESSFUL |
 
-## Próximo passo
+## Estado e próximos passos
 
-Incorporar modelos em `socket_lib.c` na biblioteca c2goto do ESBMC (fork local) e verificar trechos reais de `packet_mosq.c` / loop principal com `select`/`poll`.
+Os modelos deste protótipo já foram incorporados à biblioteca `c2goto` do ESBMC por pull request aceito. A etapa local restante é ampliar a verificação de trechos reais de `packet_mosq.c` e do loop principal com `select`/`poll`; modelos para `epoll`, resolução de nomes e TLS/SSL ficam registrados como trabalho futuro.

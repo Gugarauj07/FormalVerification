@@ -2,6 +2,8 @@
 
 Arquivo `network_stubs.c`: modelos mínimos de `socket`, `bind`, `listen`, `accept`, `recv`, `send`, `close`, `select` e `poll` para compilação com ESBMC.
 
+Os mesmos modelos foram incorporados à biblioteca `c2goto` do ESBMC via pull request aceito (upstream). Este diretório permanece como referência para os harnesses deste repositório.
+
 Exemplo:
 
 ```text

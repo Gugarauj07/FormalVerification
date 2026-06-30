@@ -1,7 +1,6 @@
-# Responsible Disclosure Draft — Eclipse Mosquitto
+# Responsible Disclosure — Eclipse Mosquitto
 
-**Submit via**: https://gitlab.eclipse.org/security/vulnerability-reports/-/issues/new?issuable_template=new_vulnerability  
-**OR email**: security@eclipse-foundation.org  
+**Status**: enviado (junho/2026) — [Eclipse Security Report #551](https://gitlab.eclipse.org/security/vulnerability-reports/-/work_items/551)
 **Project**: Eclipse Mosquitto (https://github.com/eclipse-mosquitto/mosquitto)
 
 ---
