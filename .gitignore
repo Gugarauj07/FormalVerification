@@ -1,4 +1,5 @@
 tools/esbmc/
+tools/mosquitto/
 /mosquitto/
 /esbmc/
 *.log.bak
