@@ -5,7 +5,7 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\initial_packet_state_harness_fixed.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.412s
+GOTO program creation time: 1.556s
 GOTO program processing time: 0.000s
 Starting Bounded Model Checking
 Symex completed in: 0.000s (25 assignments)
@@ -16,7 +16,7 @@ No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
 Encoding to solver time: 0.000s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.000s
-BMC program time: 0.012s
+Runtime decision procedure: 0.017s
+BMC program time: 0.049s
 
 VERIFICATION SUCCESSFUL

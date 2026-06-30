@@ -5,18 +5,18 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\qos2_dup_leak_harness_fixed.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.379s
-GOTO program processing time: 0.000s
+GOTO program creation time: 1.714s
+GOTO program processing time: 0.009s
 Starting Bounded Model Checking
-Symex completed in: 0.060s (335 assignments)
-Caching time: 0.019s (removed 74 assertions)
-Slicing time: 0.005s (removed 50 assignments)
+Symex completed in: 0.382s (335 assignments)
+Caching time: 0.075s (removed 74 assertions)
+Slicing time: 0.016s (removed 50 assignments)
 Generated 203 VCC(s), 92 remaining after simplification (211 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.006s
+Encoding to solver time: 0.054s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 3.084s
-BMC program time: 3.194s
+Runtime decision procedure: 16.309s
+BMC program time: 16.862s
 
 VERIFICATION SUCCESSFUL

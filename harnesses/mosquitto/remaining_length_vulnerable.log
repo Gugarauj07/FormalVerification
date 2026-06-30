@@ -5,14 +5,14 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\remaining_length_harness.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.370s
+GOTO program creation time: 0.980s
 GOTO program processing time: 0.000s
 Starting Bounded Model Checking
 Unwinding loop 15 iteration 1   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function read_remaining_length_vulnerable
 Unwinding loop 15 iteration 2   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function read_remaining_length_vulnerable
 Unwinding loop 15 iteration 3   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function read_remaining_length_vulnerable
 Unwinding loop 15 iteration 4   file harnesses\mosquitto\remaining_length_harness.c line 56 column 14 function read_remaining_length_vulnerable
-Symex completed in: 0.006s (73 assignments)
+Symex completed in: 0.009s (73 assignments)
 Caching time: 0.000s (removed 2 assertions)
 Slicing time: 0.000s (removed 48 assignments)
 Generated 40 VCC(s), 22 remaining after simplification (23 assignments)

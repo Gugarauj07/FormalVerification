@@ -5,8 +5,8 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\acl_bypass_harness.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.380s
-GOTO program processing time: 0.018s
+GOTO program creation time: 0.838s
+GOTO program processing time: 0.008s
 Starting Bounded Model Checking
 Unwinding loop 7 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 92 column 3 function strlen
 Unwinding loop 7 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 92 column 3 function strlen
@@ -2434,15 +2434,15 @@ Unwinding loop 35 iteration 31   file harnesses\mosquitto\acl_bypass_harness.c l
 Not unwinding loop 35 iteration 32   file harnesses\mosquitto\acl_bypass_harness.c line 120 column 17 function mosquitto_topic_matches_sub
 Not unwinding loop 36 iteration 32   file harnesses\mosquitto\acl_bypass_harness.c line 84 column 5 function mosquitto_topic_matches_sub
 Unwinding loop 39 iteration 1   file harnesses\mosquitto\acl_bypass_harness.c line 190 column 5 function mosquitto_acl_check_default
-Symex completed in: 9.804s (21781 assignments)
-Caching time: 2.265s (removed 1 assertions)
-Slicing time: 3.362s (removed 6625 assignments)
+Symex completed in: 43.733s (21781 assignments)
+Caching time: 14.042s (removed 1 assertions)
+Slicing time: 22.370s (removed 6625 assignments)
 Generated 13639 VCC(s), 6233 remaining after simplification (15155 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.786s
+Encoding to solver time: 3.842s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 69.045s
+Runtime decision procedure: 291.760s
 Building error trace
 
 [Counterexample]

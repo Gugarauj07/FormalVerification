@@ -5,7 +5,7 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\varint_harness.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.367s
+GOTO program creation time: 1.544s
 GOTO program processing time: 0.000s
 Starting Bounded Model Checking
 Unwinding loop 4 iteration 1   file harnesses\mosquitto\varint_harness.c line 72 column 5 function main
@@ -17,7 +17,7 @@ Unwinding loop 3 iteration 1   file harnesses\mosquitto\varint_harness.c line 41
 Unwinding loop 3 iteration 2   file harnesses\mosquitto\varint_harness.c line 41 column 5 function packet__read_varint
 Unwinding loop 3 iteration 3   file harnesses\mosquitto\varint_harness.c line 41 column 5 function packet__read_varint
 Unwinding loop 3 iteration 4   file harnesses\mosquitto\varint_harness.c line 41 column 5 function packet__read_varint
-Symex completed in: 0.012s (170 assignments)
+Symex completed in: 0.051s (170 assignments)
 Caching time: 0.000s (removed 0 assertions)
 Slicing time: 0.000s (removed 99 assignments)
 Generated 113 VCC(s), 7 remaining after simplification (71 assignments)
@@ -25,7 +25,7 @@ No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
 Encoding to solver time: 0.000s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.012s
-BMC program time: 0.030s
+Runtime decision procedure: 0.067s
+BMC program time: 0.150s
 
 VERIFICATION SUCCESSFUL

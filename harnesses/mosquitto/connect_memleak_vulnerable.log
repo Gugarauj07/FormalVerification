@@ -5,8 +5,8 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\connect_memleak_harness.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.388s
-GOTO program processing time: 0.005s
+GOTO program creation time: 0.801s
+GOTO program processing time: 0.000s
 Starting Bounded Model Checking
 Unwinding loop 35 iteration 1   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
 Unwinding loop 35 iteration 2   file harnesses\mosquitto\connect_memleak_harness.c line 179 column 5 function main
@@ -48,15 +48,15 @@ Unwinding loop 38 iteration 13   file D:/a/esbmc/esbmc/src/c2goto/library/string
 Unwinding loop 38 iteration 14   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
 Unwinding loop 38 iteration 15   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
 Not unwinding loop 38 iteration 16   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
-Symex completed in: 0.067s (706 assignments)
+Symex completed in: 0.100s (706 assignments)
 Caching time: 0.006s (removed 29 assertions)
-Slicing time: 0.000s (removed 321 assignments)
+Slicing time: 0.009s (removed 321 assignments)
 Generated 440 VCC(s), 230 remaining after simplification (356 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.006s
+Encoding to solver time: 0.013s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.853s
+Runtime decision procedure: 1.559s
 Building error trace
 
 [Counterexample]

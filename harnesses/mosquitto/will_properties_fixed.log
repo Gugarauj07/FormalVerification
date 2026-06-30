@@ -5,18 +5,18 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\will_properties_memleak_harness_fixed.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.416s
-GOTO program processing time: 0.000s
+GOTO program creation time: 1.691s
+GOTO program processing time: 0.009s
 Starting Bounded Model Checking
-Symex completed in: 0.000s (55 assignments)
+Symex completed in: 0.006s (55 assignments)
 Caching time: 0.000s (removed 1 assertions)
 Slicing time: 0.000s (removed 24 assignments)
 Generated 8 VCC(s), 2 remaining after simplification (30 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.000s
+Encoding to solver time: 0.008s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.006s
-BMC program time: 0.018s
+Runtime decision procedure: 0.019s
+BMC program time: 0.063s
 
 VERIFICATION SUCCESSFUL

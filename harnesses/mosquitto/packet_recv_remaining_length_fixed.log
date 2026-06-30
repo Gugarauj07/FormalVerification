@@ -20,7 +20,7 @@ harnesses\mosquitto\../../esbmc_models/network_common.h:56:5: note: declared her
       |     ^
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.400s
+GOTO program creation time: 1.852s
 GOTO program processing time: 0.000s
 Starting Bounded Model Checking
 Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
@@ -31,15 +31,15 @@ Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 
 Unwinding loop 8 iteration 3   file harnesses\mosquitto\packet_recv_remaining_length_harness_fixed.c line 55 column 14 function read_remaining_length_fixed
 Unwinding loop 7 iteration 1   file esbmc_models\network_stubs.c line 74 column 5 function recv
 Unwinding loop 8 iteration 4   file harnesses\mosquitto\packet_recv_remaining_length_harness_fixed.c line 55 column 14 function read_remaining_length_fixed
-Symex completed in: 0.006s (221 assignments)
+Symex completed in: 0.033s (221 assignments)
 Caching time: 0.000s (removed 0 assertions)
 Slicing time: 0.000s (removed 128 assignments)
 Generated 20 VCC(s), 2 remaining after simplification (93 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.000s
+Encoding to solver time: 0.007s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.006s
-BMC program time: 0.018s
+Runtime decision procedure: 0.025s
+BMC program time: 0.086s
 
 VERIFICATION SUCCESSFUL

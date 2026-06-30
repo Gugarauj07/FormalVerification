@@ -5,8 +5,8 @@ Target: 64-bit little-endian x86_64-unknown-windows with esbmclibc
 Parsing harnesses\mosquitto\read_binary_obo_harness.c
 Converting
 Generating GOTO Program
-GOTO program creation time: 0.400s
-GOTO program processing time: 0.000s
+GOTO program creation time: 0.766s
+GOTO program processing time: 0.005s
 Starting Bounded Model Checking
 Unwinding loop 37 iteration 1   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
 Unwinding loop 37 iteration 2   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
@@ -16,15 +16,15 @@ Unwinding loop 37 iteration 5   file D:/a/esbmc/esbmc/src/c2goto/library/string.
 Unwinding loop 37 iteration 6   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
 Unwinding loop 37 iteration 7   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
 Not unwinding loop 37 iteration 8   file D:/a/esbmc/esbmc/src/c2goto/library/string.c line 278 column 3 function __memcpy_impl
-Symex completed in: 0.018s (177 assignments)
+Symex completed in: 0.037s (177 assignments)
 Caching time: 0.000s (removed 1 assertions)
 Slicing time: 0.000s (removed 90 assignments)
 Generated 128 VCC(s), 40 remaining after simplification (86 assignments)
 No solver specified; defaulting to z3
 Encoding remaining VCC(s) using bit-vector/floating-point arithmetic
-Encoding to solver time: 0.000s
+Encoding to solver time: 0.005s
 Solving with solver Z3 v4.13.3
-Runtime decision procedure: 0.036s
+Runtime decision procedure: 0.076s
 Building error trace
 
 [Counterexample]
