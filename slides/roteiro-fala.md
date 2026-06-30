@@ -46,53 +46,65 @@ O modelo central é `recv`: ele preenche o buffer com bytes não determinístico
 
 ## Slide 7 — Avaliação: objetivos, benchmarks e setup
 
-A avaliação responde a quatro perguntas: o método detecta vulnerabilidades conhecidas; os modelos preservam os defeitos quando o caminho passa pela rede; qual é o custo computacional; e propriedades de domínio revelam falhas no código atual?
+Agora que a gente já explicou como os modelos de rede funcionam, eu vou mostrar como avaliamos a proposta na prática.
 
-O corpus contém sete CVEs, uma regressão CWE-193, propriedades MQTT, casos de integração via `recv` e as variantes do achado novo, totalizando 21 execuções.
+A avaliação foi guiada pelas quatro perguntas do lado esquerdo. Primeiro: o método encontra vulnerabilidades conhecidas? Segundo: quando a entrada passa pela rede modelada, o defeito continua aparecendo? Terceiro: quanto tempo e memória essa análise exige? E, por último: conseguimos encontrar algum problema no código atual?
 
-Executamos ESBMC 8.3 com Z3 em Windows 11 e processador Intel Core i7. O `unwind` varia de 4 a 32. Medimos o resultado da propriedade, o tempo de parede e o pico de memória. Fontes, comandos e logs estão versionados.
+Para responder a isso, fizemos vinte e uma execuções, incluindo CVEs, testes de integração e uma versão recente do Mosquitto. Como aparece no lado direito, usamos o ESBMC 8.3 com o Z3 e medimos o resultado, o tempo e o pico de memória de cada teste.
 
 ## Slide 8 — Resultados de detecção
 
-Nos casos isolados, `FAIL` na variante vulnerável significa que o ESBMC encontrou a violação. Onde temos a correção, o resultado muda para `SUCC`.
+Começando pelos resultados de detecção, as duas últimas colunas comparam o código vulnerável com o corrigido. `FAIL` na versão vulnerável significa que o ESBMC encontrou o defeito. Já `SUCC` na corrigida significa que a violação deixou de acontecer.
 
-Nos pares de integração, o parser recebe bytes pelo modelo de `recv`, e não por um vetor fixo. O mesmo padrão mostra que a abstração de rede preserva os caminhos necessários para alcançar o defeito.
+E foi esse o padrão observado nos CVEs do primeiro bloco. O mesmo ocorreu nos testes de integração do segundo bloco, em que os bytes chegam pelo modelo de `recv`, como se viessem da rede, e não por uma entrada fixa preparada no código.
 
-Todos os casos produziram o resultado esperado dentro do limite configurado, respondendo às duas primeiras questões de pesquisa.
+Então, o resultado principal é que conseguimos reproduzir as vulnerabilidades conhecidas e que a abstração da rede não escondeu os defeitos. Com isso, respondemos positivamente às duas primeiras perguntas da avaliação.
 
 ## Slide 9 — Resultados de desempenho
 
-Dezoito dos 21 casos terminam em menos de seis segundos e abaixo de 170 megabytes. O harness corrigido de QoS 2 leva cerca de 20,6 segundos, ainda com memória baixa.
+Depois de confirmar que a detecção funciona, a próxima pergunta é: qual é o custo disso?
 
-O outlier é o bypass de ACL: 389,3 segundos e aproximadamente 2,2 gigabytes na variante vulnerável. O matching de strings e curingas, combinado com `unwind 32`, produz uma fórmula SMT muito maior.
+Os três primeiros casos da tabela encontram as falhas em aproximadamente um a três segundos. O `proxy_v2_tlv`, nosso achado novo, também falha em 3,7 segundos e passa em 2,2 segundos depois da correção.
 
-Portanto, a abordagem é viável para a maioria dos subsistemas isolados, mas sensível à profundidade de busca.
+O principal caso fora desse padrão está nas duas linhas do `acl_bypass`. A variante vulnerável levou cerca de 389 segundos e consumiu mais de 2,2 gigabytes de memória. Isso acontece porque esse caso trabalha com comparação de strings e curingas e, principalmente, porque usa `unwind 32`.
+
+O `unwind` define quantas vezes os laços são desenrolados durante a análise. Quanto maior esse valor, mais caminhos o ESBMC representa e maior fica a fórmula enviada ao solver. Ele permite analisar execuções mais profundas, mas aumenta bastante o custo.
+
+Mesmo com esse caso extremo, o quadro inferior mostra que dezoito dos vinte e um testes terminaram em menos de seis segundos e abaixo de cento e setenta megabytes. Portanto, a abordagem foi viável na maioria dos casos, embora seja sensível à profundidade de busca.
 
 ## Slide 10 — Falha no snapshot v2.1.2-132-ga609c263
 
-O achado está em `src/proxy_v2.c`, na função `read_tlv_ssl`, que interpreta sub-TLVs SSL do PROXY Protocol v2.
+E isso nos leva à quarta pergunta: conseguimos encontrar uma falha no código atual? A resposta foi sim, e esse é o principal achado novo do trabalho.
 
-O contador `len` representa os bytes restantes dentro da TLV SSL. A função subtrai três bytes de cabeçalho mais `tlv_len`, mas valida o tamanho apenas contra o buffer global.
+Como aparece no primeiro bloco, a falha está no arquivo `src/proxy_v2.c`, dentro da função `read_tlv_ssl`. TLV significa tipo, tamanho e valor: é uma estrutura usada pelo protocolo para organizar os campos recebidos. Essa função processa as sub-TLVs que ficam dentro de uma TLV SSL. A variável `len` representa quantos bytes ainda restam, enquanto `tlv_len` representa o tamanho informado pela sub-TLV atual.
 
-O contraexemplo declara 256 bytes para a TLV SSL. Após o cabeçalho, restam 251. A sub-TLV declara 253 bytes; somando o cabeçalho são 256, valor maior que 251. A conversão para `uint16_t` faz o contador virar 65.531.
+A operação vulnerável está no centro do slide. O código atualiza `len` subtraindo três bytes de cabeçalho mais `tlv_len`, sem verificar antes se `3 + tlv_len` é menor ou igual ao `len` disponível.
 
-O cenário requer `proxy_protocol true` e foi reportado ao Eclipse como Security Report 551.
+Na tabela inferior está o contraexemplo. A TLV SSL declara 256 bytes e, depois do cabeçalho SSL, `len` fica em 251. A sub-TLV informa `tlv_len` igual a 253. Somando os três bytes do cabeçalho, ela precisa de 256 bytes, mas só existem 251.
+
+A subtração resulta em menos cinco. Como o valor é convertido para um unsigned int de 16 bits, `len` passa a valer 65.531. Em vez de indicar que o limite foi ultrapassado, o contador diz que ainda existe uma quantidade enorme de dados para processar.
+
+Essa falha depende de o Proxy Protocol estar habilitado. Nós reportamos o caso de forma responsável ao projeto Eclipse, no relatório de segurança número quinhentos e cinquenta e um.
 
 ## Slide 11 — Por que o harness encontrou a falha?
 
-Pelas promoções da linguagem C, a subtração ocorre como `int`. O resultado negativo intermediário é válido e a conversão posterior para `uint16_t` é comportamento definido. Portanto, não há necessariamente overflow sinalizado, comportamento indefinido ou crash.
+Mas por que esse problema foi encontrado pelo nosso teste e não apareceu automaticamente em outras ferramentas?
 
-O harness fornece o oráculo que faltava: antes da subtração, `3 + tlv_len` deve ser menor ou igual a `len`. O ESBMC encontra uma entrada que viola essa regra.
+O primeiro quadro mostra o motivo. A opção `unsigned-overflow-check` não sinaliza a operação porque, pelas regras de C, a subtração é calculada como um `int`. O `overflow-check` também não acusa erro porque o resultado negativo intermediário ainda é válido. E UBSan e libFuzzer não identificam necessariamente o problema, pois a conversão é definida pela linguagem e não produz um crash imediato.
 
-O código original falha em 3,71 segundos. Com a guarda proposta, passa em 2,17 segundos. Isso mostra a complementaridade entre fuzzing e verificação formal orientada por propriedades de domínio.
+O programa continua executando, mas com um contador incorreto. O que fez a diferença foi a propriedade do segundo quadro: antes da subtração, `3 + tlv_len` precisa ser menor ou igual a `len`. Essa asserção informa ao ESBMC o que é um estado inválido nesse contexto.
+
+Com essa regra, o código original falhou em 3,71 segundos. A correção proposta é a que aparece logo abaixo: rejeitar a TLV antes da subtração quando o tamanho informado for maior do que o espaço restante. Depois dessa guarda, o mesmo harness terminou com sucesso em 2,17 segundos.
 
 ## Slide 12 — Evidências e transferência dos resultados
 
-À esquerda está o Security Report 551, com o snapshot analisado, a configuração afetada e o trecho responsável pelo underflow. O status confidencial faz parte do processo de divulgação coordenada autorizado para esta apresentação.
+Por fim, este slide mostra que os resultados não ficaram apenas dentro do nosso ambiente de pesquisa.
 
-À direita está a contribuição upstream 5388 no ESBMC, incorporando modelos POSIX de `socket`, `select` e `poll`.
+Na imagem à esquerda está o Security Report 551, enviado ao Eclipse. Ele registra o snapshot analisado anteriormente.
 
-Esses registros mostram que o trabalho produziu resultados transferidos para as comunidades envolvidas, e não apenas experimentos locais.
+Na imagem à direita está o pull request que fizemos ao ESBMC. Por meio dessa contribuição, os modelos POSIX de `socket`, `select` e `poll` desenvolvidos no trabalho foram incorporados ao verificador.
+
+Então, além dos resultados experimentais, o trabalho gerou duas contribuições concretas: uma para a segurança do Mosquitto e outra para ampliar a capacidade de análise do ESBMC.
 
 ## Slide 13 — Contribuições e ameaças à validade
 
