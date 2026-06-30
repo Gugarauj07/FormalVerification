@@ -1,104 +1,143 @@
-# Roteiro de fala — Resultados e Nova Vulnerabilidade
+# Roteiro de fala — Defesa final
 
-## Slide — CVEs Cobertos
+Tempo sugerido: 14 a 17 minutos, sem contar perguntas. Use o texto como guia de raciocínio; não é necessário decorar palavra por palavra.
 
-Primeiro vou explicar como a gente validou a metodologia.
+## Slide 1 — Título
 
-Na tabela vocês veem CVE e CWE. CVE é o identificador público de uma falha — tipo “CVE-2017-7651”. CWE é a categoria do defeito: overflow, vazamento de memória, bypass de ACL, e assim por diante.
+Boa tarde. Nós somos Gustavo Lima, Willian Jean e Paulo Gomes. Este trabalho foi desenvolvido na Universidade Federal do Amazonas, sob orientação do professor Lucas Cordeiro.
 
-Por que gastar tempo com bugs que já foram documentados? Porque a gente não está tentando redescobrir esses bugs. Já sabemos que existiram e em qual versão foram corrigidos.
+Investigamos como usar o ESBMC para verificar vulnerabilidades em brokers MQTT, tendo o Eclipse Mosquitto como estudo de caso.
 
-Usamos esses CVEs como oráculo: se o ESBMC, com nossos harnesses, detecta o defeito na versão vulnerável e para de reclamar na versão corrigida, ganhamos confiança de que a ferramenta e a modelagem estão funcionando.
+## Slide 2 — Roteiro
 
-São sete CVEs do Mosquitto na tabela, de 2017 a 2024 — todos defeitos clássicos de C em software de rede.
+Vou apresentar o problema, posicionar a proposta em relação aos trabalhos relacionados, explicar a arquitetura e os modelos de rede e então mostrar a avaliação experimental. Depois detalho o achado de segurança, as ameaças à validade e a conclusão.
 
-No total são 21 execuções do ESBMC
----
+## Slide 3 — Problema, objetivo e entregas
 
-## Slide — Resultados: Detecção
+O broker é um ponto central em sistemas MQTT e processa pacotes controlados pela rede. O Mosquitto é escrito em C, mas sua verificação pelo ESBMC encontra uma barreira: chamadas externas como `recv`, `select` e `poll` não representam automaticamente os comportamentos da rede.
 
-Esta tabela responde à pergunta central: o ESBMC encontrou o bug na versão vulnerável e deixou de encontrar na versão corrigida?
+O objetivo foi abstrair essas APIs sem simular o kernel ou TCP/IP. Como entregas, temos modelos para nove funções POSIX, 21 harnesses simbólicos, avaliação em CVEs e no snapshot `v2.1.2-132-ga609c263`, além da contribuição upstream 5388 e do Security Report 551.
 
-FAILED na coluna Vuln. é o resultado esperado — a ferramenta achou o defeito. SUCCESSFUL em Fix é o que queremos — com o patch do Mosquitto, a propriedade passa a valer. Se invertesse, algo estaria errado na metodologia.
+A pergunta central é: como modelar a interação com a rede para verificar vulnerabilidades reais do Mosquitto com ESBMC?
 
-O primeiro bloco são CVEs em harnesses isolados: extraímos a função vulnerável, simplificamos structs e verificamos num mini-programa. Na maioria usamos flags automáticas do ESBMC — overflow sem sinal, memory leak ou unwind para limitar loops.
+## Slide 4 — Comparação com abordagens relacionadas
 
-O segundo bloco testa os mesmos bugs, mas pelo caminho que o broker usa de verdade. No bloco anterior os bytes vinham de um array fixo dentro do programa. Aqui o parser chama recv — a função que lê dados do socket quando um cliente se conecta. O ESBMC não entende rede real, então a gente criou substitutos: quando o código chama recv, nosso stub devolve bytes simbólicos, como se um atacante controlasse o que chega na conexão. Repetimos isso para dois CVEs — remaining length e primeiro pacote. Se o ESBMC acha o bug por esse caminho também, sabemos que os stubs funcionam, não só o mini-programa isolado.
+Fuzzing executa entradas concretas e funciona muito bem quando há um oráculo observável, como crash ou sanitizer. Frama-C com WP usa prova dedutiva e contratos ACSL. O CBMC também usa BMC e possui infraestrutura de harnesses e modelos.
 
-O terceiro bloco é a falha nova que encontramos em proxy_v2, no código atual: FAILED com o bug; SUCCESSFUL depois da guarda que propomos.
+Nossa proposta não substitui essas abordagens. O diferencial é combinar, no ESBMC, modelos POSIX, rede simbólica, comparação entre versões vulnerável e corrigida e invariantes específicos do domínio. A garantia continua limitada pelo `unwind`, com contraexemplo quando há violação.
 
----
+## Slide 5 — Arquitetura do método proposto
 
-## Slide — Resultados: Desempenho
+A arquitetura possui cinco etapas. Primeiro selecionamos CVEs, parsers ou o snapshot atual. Depois construímos um harness com entradas simbólicas e um ambiente C reduzido.
 
-Detectar o bug é uma coisa; outra é saber se a abordagem é viável em tempo e memória. Rodamos todos os harnesses com ESBMC 8.3 e solver Z3 — script automatizado, resultados em bench_results.csv.
+Os modelos POSIX substituem as dependências da rede por comportamentos não determinísticos. O front-end Clang e o `c2goto` processam o programa; o ESBMC desenrola os laços, gera a forma SSA, codifica as operações em bit-vectors e envia a fórmula ao Z3.
 
-A boa notícia: 19 de 21 harnesses terminam em menos de 4 segundos e menos de 170 MB. 
+Por fim coletamos resultado, contraexemplo, tempo e memória. A validação espera `FAILED` na variante vulnerável e `SUCCESSFUL` na corrigida. Cada etapa deixa um artefato auditável: código, comando, modelo ou log.
 
-O outlier é o ACL bypass: cerca de 88 segundos e 2,2 GB. O cenário é um atacante com username desconhecido tentando ler o tópico victim/data. O broker compara isso com o padrão %u/data caractere a caractere, em loop — e o ESBMC precisa considerar todas as possibilidades de username e todos os caminhos do matching com wildcard. Por isso usamos unwind 32 e o custo explode. Na versão corrigida cai para cerca de 23 segundos: o patch valida o username antes e elimina caminhos inválidos cedo, então o solver trabalha menos — ainda pesado, mas mostra que o fix simplifica a análise.
+## Slide 6 — Modelos operacionais de rede
 
-Conclusão: para subsistemas isolados do Mosquitto, o custo é aceitável para pesquisa e reprodução. O ACL é o caso que exige calibrar parâmetros ou aceitar custo maior.
+Um modelo operacional substitui uma função externa por uma abstração que conserva os comportamentos relevantes.
 
----
+Para `socket` e `accept`, modelamos descritores possíveis. `bind`, `listen` e `close` têm efeitos simplificados. `send` retorna uma quantidade possível de bytes enviados.
 
-## Transição (antes da vulnerabilidade)
+O modelo central é `recv`: ele preenche o buffer com bytes não determinísticos e escolhe um comprimento permitido. Assim, os bytes representam qualquer entrada enviada por um atacante.
 
-Validamos a metodologia nos CVEs conhecidos. O passo seguinte foi aplicar a mesma lógica ao código atual do Mosquitto 2.1.x — e encontramos algo que ainda não está no NVD.
+`select` e `poll` representam conjuntos possíveis de descritores e eventos prontos, permitindo alcançar o loop de eventos sem simular o kernel.
 
----
+## Slide 7 — Avaliação: objetivos, benchmarks e setup
 
-## Slide — Vulnerabilidade (1/2)
+A avaliação responde a quatro perguntas: o método detecta vulnerabilidades conhecidas; os modelos preservam os defeitos quando o caminho passa pela rede; qual é o custo computacional; e propriedades de domínio revelam falhas no código atual?
 
-*(Apontar o bloco de cima do slide)*
+O corpus contém sete CVEs, uma regressão CWE-193, propriedades MQTT, casos de integração via `recv` e as variantes do achado novo, totalizando 21 execuções.
 
-Aqui está o achado novo. Arquivo `proxy_v2.c`, função `read_tlv_ssl`. É o pedaço do Mosquitto que lê um cabeçalho especial chamado PROXY Protocol v2.
+Executamos ESBMC 8.3 com Z3 em Windows 11 e processador Intel Core i7. O `unwind` varia de 4 a 32. Medimos o resultado da propriedade, o tempo de parede e o pico de memória. Fontes, comandos e logs estão versionados.
 
-Quando isso importa? Só quando o broker está atrás de um load balancer e a opção `proxy_protocol true` está ligada no `mosquitto.conf`. Não é o cenário padrão — a maioria das instalações não usa. 
+## Slide 8 — Resultados de detecção
 
-O que o código faz, em termos simples: dentro desse cabeçalho tem um bloco SSL, e dentro dele podem vir blocos menores. O programa guarda num contador — a variável `len` no slide — quantos bytes **ainda faltam ler dentro desse bloco SSL**.
+Nos casos isolados, `FAIL` na variante vulnerável significa que o ESBMC encontrou a violação. Onde temos a correção, o resultado muda para `SUCC`.
 
-O bug está nessa linha que o slide destaca: o programa **subtrai** do contador o tamanho do bloco menor **sem checar antes** se aquele bloco realmente cabe no que ainda restava. Falta uma validação simples: “isso cabe no que sobrou?”
+Nos pares de integração, o parser recebe bytes pelo modelo de `recv`, e não por um vetor fixo. O mesmo padrão mostra que a abstração de rede preserva os caminhos necessários para alcançar o defeito.
 
-*(Apontar a tabela “Contraexemplo ESBMC”)*
+Todos os casos produziram o resultado esperado dentro do limite configurado, respondendo às duas primeiras questões de pesquisa.
 
-O ESBMC montou um exemplo concreto em menos de 1 segundo.
+## Slide 9 — Resultados de desempenho
 
-Primeira linha: o bloco SSL tem tamanho total 256. Depois de ler o cabeçalho fixo de 5 bytes, sobram **251 bytes** no contador — é o `len` igual a 251 que aparece aí.
+Dezoito dos 21 casos terminam em menos de seis segundos e abaixo de 170 megabytes. O harness corrigido de QoS 2 leva cerca de 20,6 segundos, ainda com memória baixa.
 
-Segunda linha: chega um bloco interno que declara **253 bytes** de conteúdo — o `tlv_len` igual a 253. O Mosquitto pergunta: “253 cabe no pacote inteiro?” Cabe — o buffer geral tem até 500 bytes, então **passa** no check que está na tabela.
+O outlier é o bypass de ACL: 389,3 segundos e aproximadamente 2,2 gigabytes na variante vulnerável. O matching de strings e curingas, combinado com `unwind 32`, produz uma fórmula SMT muito maior.
 
-O problema é outro: 253 é **maior** que os 251 que ainda restavam **dentro** do bloco SSL. Mas o código não faz essa segunda pergunta. Ele subtrai mesmo assim — na prática, tira 256 de 251, o resultado fica **negativo**. Só que o contador não guarda negativo: ele converte esse valor e acaba virando **65.531**. O programa então acha que ainda faltam esses de bytes para ler, quando na verdade não deveria.
+Portanto, a abordagem é viável para a maioria dos subsistemas isolados, mas sensível à profundidade de busca.
 
-*(Apontar FAILED / SUCCESSFUL)*
+## Slide 10 — Falha no snapshot v2.1.2-132-ga609c263
 
-Rodamos o harness com o comportamento atual: **VERIFICATION FAILED** — o ESBMC provou que esse cenário é possível.
+O achado está em `src/proxy_v2.c`, na função `read_tlv_ssl`, que interpreta sub-TLVs SSL do PROXY Protocol v2.
 
-Quando colocamos no harness a correção que falta — basicamente, rejeitar o pacote se o bloco interno for maior que o que sobrou — passa para **SUCCESSFUL**.
+O contador `len` representa os bytes restantes dentro da TLV SSL. A função subtrai três bytes de cabeçalho mais `tlv_len`, mas valida o tamanho apenas contra o buffer global.
 
-*(Apontar a nota de rodapé)*
+O contraexemplo declara 256 bytes para a TLV SSL. Após o cabeçalho, restam 251. A sub-TLV declara 253 bytes; somando o cabeçalho são 256, valor maior que 251. A conversão para `uint16_t` faz o contador virar 65.531.
 
-Impacto: severidade baixa. A conexão acaba sendo rejeitada; Vamos reportar ao Eclipse em divulgação coordenada.
+O cenário requer `proxy_protocol true` e foi reportado ao Eclipse como Security Report 551.
 
----
-## Slide — Vulnerabilidade (2/2)
+## Slide 11 — Por que o harness encontrou a falha?
 
-Agora a pergunta natural: se o bug existe, por que fuzzing e as checagens automáticas do ESBMC não pegaram sozinhas?
+Pelas promoções da linguagem C, a subtração ocorre como `int`. O resultado negativo intermediário é válido e a conversão posterior para `uint16_t` é comportamento definido. Portanto, não há necessariamente overflow sinalizado, comportamento indefinido ou crash.
 
-Resposta curta: **porque o programa não quebra**. Não tem crash, não tem corrupção de memória óbvia. O que acontece eh que o broker lê errado, o contador fica inconsistente, mas no fim a conexão é recusada e a execução termina “normalmente”.
+O harness fornece o oráculo que faltava: antes da subtração, `3 + tlv_len` deve ser menor ou igual a `len`. O ESBMC encontra uma entrada que viola essa regra.
 
-Por isso as flags automáticas do ESBMC não ajudam aqui:
+O código original falha em 3,71 segundos. Com a guarda proposta, passa em 2,17 segundos. Isso mostra a complementaridade entre fuzzing e verificação formal orientada por propriedades de domínio.
 
-- `--unsigned-overflow-check` — não dispara, porque a subtração problemática não acontece direto em tipo unsigned.
-- `--overflow-check` — também não, porque o resultado intermediário ainda é um número inteiro válido
+## Slide 12 — Evidências e transferência dos resultados
 
-*(Apontar a nota do commit na parte de baixo)*
+À esquerda está o Security Report 551, com o snapshot analisado, a configuração afetada e o trecho responsável pelo underflow. O status confidencial faz parte do processo de divulgação coordenada autorizado para esta apresentação.
 
-Inclusive o próprio Mosquitto ganhou um fuzzer para esse arquivo em janeiro de 2026 — commit `23c918ee` — e mesmo assim **não** achou esse caso.
+À direita está a contribuição upstream 5388 no ESBMC, incorporando modelos POSIX de `socket`, `select` e `poll`.
 
-*(Apontar o bloco “Por que o ESBMC com harness detectou”)*
+Esses registros mostram que o trabalho produziu resultados transferidos para as comunidades envolvidas, e não apenas experimentos locais.
 
-O que a gente fez de diferente foi escrever no harness a **regra que o código deveria obedecer**, usando `__ESBMC_assert`.
+## Slide 13 — Contribuições e ameaças à validade
 
-a regra é: “antes de subtrair o tamanho do bloco interno do contador, esse bloco tem que caber no que ainda restava.”
+As contribuições principais são a arquitetura de verificação, os nove modelos POSIX, os 21 harnesses reproduzíveis, a validação em CVEs, a contribuição upstream e o reporte ao Eclipse.
 
-Aí a ferramenta pergunta: existe alguma combinação de tamanhos que viola essa regra? Existe — e é exatamente o contraexemplo da tabela do slide anterior.
+As conclusões precisam ser lidas dentro de quatro limites: os harnesses reduzem o contexto do broker; as garantias dependem de `unwind`, hipóteses e asserts; o estudo cobre um broker e um subconjunto de APIs e CVEs; e o desempenho foi medido em uma única máquina.
+
+Mitigamos esses riscos comparando variantes vulneráveis e corrigidas, criando casos via `recv` e versionando comandos, fontes e logs.
+
+## Slide 14 — Conclusão
+
+Modelos POSIX e harnesses simbólicos tornam as entradas de rede acessíveis ao ESBMC sem simular a pilha TCP/IP.
+
+A metodologia reproduziu CVEs, distinguiu variantes vulneráveis e corrigidas e apresentou baixo custo na maioria dos casos. Ao expressar uma regra de domínio que não corresponde diretamente a um crash, também revelou uma falha no snapshot analisado.
+
+Assim, a verificação formal não substitui testes ou fuzzing. Ela complementa essas técnicas com exploração simbólica e oráculos lógicos explícitos.
+
+## Slide 15 — Obrigado
+
+Obrigado. Ficamos à disposição para perguntas.
+
+Os harnesses, comandos, logs e modelos estão organizados nos diretórios indicados no slide.
+
+## Respostas curtas para perguntas prováveis
+
+### “Vocês verificaram o Mosquitto inteiro?”
+
+Não. Verificamos subsistemas isolados e caminhos de integração delimitados, com dependências reduzidas e modelos de rede.
+
+### “SUCCESSFUL prova ausência total de bugs?”
+
+Não. Prova que a propriedade especificada não foi violada dentro das hipóteses do harness e do limite de desenrolamento utilizado.
+
+### “Qual é a diferença para o CBMC?”
+
+As duas ferramentas usam BMC. A contribuição está na arquitetura aplicada ao ESBMC, nos modelos POSIX, nos harnesses comparativos e na avaliação sobre o Mosquitto.
+
+### “Por que não usar apenas fuzzing?”
+
+Fuzzing é excelente quando existe um oráculo observável. Neste achado não há necessariamente crash; a asserção formal fornece o oráculo lógico que faltava.
+
+### “Qual foi exatamente a versão analisada?”
+
+O snapshot `v2.1.2-132-ga609c263`, revisão curta `a609c263`, de junho de 2026.
+
+### “Qual é o impacto da falha?”
+
+O cenário requer `proxy_protocol true`. O contador interno sofre wraparound e o parser pode processar além do comprimento declarado da TLV SSL. A classificação final depende da análise coordenada com o Eclipse.

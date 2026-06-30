@@ -1,14 +1,18 @@
 \documentclass[10pt,aspectratio=169]{beamer}
 
 \usetheme{metropolis}
-\metroset{progressbar=frametitle}
+\metroset{progressbar=frametitle,sectionpage=none}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[brazilian]{babel}
 \usepackage{booktabs}
+\usepackage{array}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
 
 \definecolor{bgcode}{RGB}{248,248,242}
 \definecolor{kwcode}{RGB}{36,82,160}
@@ -34,24 +38,21 @@
     tabsize=4,
     frame=single,
     framerule=0pt,
-    morekeywords={uint8_t,uint32_t,size_t,__ESBMC_assert}
+    morekeywords={uint8_t,uint16_t,uint32_t,size_t,__ESBMC_assert}
 }
 
-\lstdefinestyle{outstyle}{
-    backgroundcolor=\color{bgterm},
-    basicstyle=\ttfamily\tiny\color{fgterm},
-    breaklines=true,
-    keepspaces=true,
-    showstringspaces=false,
-    tabsize=4,
-    frame=single,
-    framerule=0pt
-}
+\newcommand{\mosqversion}{\texttt{v2.1.2-132-ga609c263}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
 
-\title{Operational Models para Verifica\c{c}\~ao de Brokers MQTT com ESBMC}
-\subtitle{Defesa Intermedi\'aria}
+\setbeamerfont{title}{size=\Large}
+\setbeamerfont{subtitle}{size=\normalsize}
+\setbeamerfont{author}{size=\small}
+\setbeamerfont{institute}{size=\footnotesize}
+\title{Operational Models para Verifica\c{c}\~ao\\de Brokers MQTT com ESBMC}
+\subtitle{Defesa Final}
 \author{Gustavo Lima \and Willian Jean \and Paulo Gomes}
-\date{Junho de 2026}
+\institute{Universidade Federal do Amazonas (UFAM)\\Orientador: Prof. Lucas Cordeiro}
+\date{Julho de 2026}
 
 \begin{document}
 
@@ -63,222 +64,335 @@
 \end{frame}
 
 % ==================================================================
-\section{Progresso}
+\section{Problema e Objetivos}
 
-\begin{frame}{O que foi feito / O que \'e novo}
+\begin{frame}{Problema, Objetivo e Entregas}
     \begin{columns}[T]
         \column{0.48\textwidth}
-        \textbf{Estabelecido anteriormente}
+        \textbf{Problema}
         \begin{itemize}
-            \item ESBMC com BMC para C
-            \item Conceito de harness simb\'olico
-            \item 7 CVEs do Mosquitto modelados
-            \item Problema: APIs de rede sem modelo
-            \item Modelos: \texttt{socket}, \texttt{recv}, \texttt{send}, \texttt{bind}, \texttt{accept}, \texttt{close}
+            \item Broker MQTT \'e ponto cr\'itico em sistemas IoT
+            \item Mosquitto processa entradas de rede em C
+            \item APIs POSIX externas bloqueiam a an\'alise pelo ESBMC
+            \item Simular kernel e TCP/IP seria invi\'avel
         \end{itemize}
         \column{0.48\textwidth}
-        \alert{\textbf{Desde ent\~ao}}
+        \textbf{Objetivo e entregas}
         \begin{itemize}
-            \item Modelos \texttt{select}/\texttt{poll} conclu\'idos
-            \item 4 harnesses de integra\c{c}\~ao via \texttt{recv()}
-            \item \textbf{21 harnesses totais verificados}
-            \item \alert{Nova vulnerabilidade encontrada no Mosquitto~2.1.x (CWE-191)}
+            \item Abstrair a rede com modelos operacionais
+            \item \textbf{9 fun\c{c}\~oes POSIX} modeladas
+            \item \textbf{21 harnesses} simb\'olicos
+            \item Avalia\c{c}\~ao em CVEs e no snapshot \mosqversion
+            \item PR \#5388 e Security Report \#551
         \end{itemize}
     \end{columns}
+    \vspace{0.6em}
+    \begin{alertblock}{Problema de pesquisa}
+        Como modelar a intera\c{c}\~ao com a rede para verificar vulnerabilidades
+        reais do Eclipse Mosquitto com ESBMC?
+    \end{alertblock}
 \end{frame}
 
-\begin{frame}{Modelos Operacionais Implementados}
-    \textbf{Arquivo:} \texttt{esbmc\_models/network\_stubs.c}
+% ==================================================================
+\section{Trabalhos Relacionados}
+
+\begin{frame}{Compara\c{c}\~ao com Abordagens Relacionadas}
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \renewcommand{\arraystretch}{1.22}
+    \begin{tabular}{L{2.25cm}L{2.25cm}L{2.85cm}L{3.0cm}L{2.55cm}}
+        \toprule
+        Abordagem & Explora\c{c}\~ao & Ambiente de rede & Or\'aculo / propriedade & Garantia / sa\'ida \\
+        \midrule
+        Fuzzing (OSS-Fuzz) & entradas concretas guiadas por cobertura & execu\c{c}\~ao real ou stubs do alvo & crash, sanitizer e invariantes instrumentados & bugs concretos; sem prova de aus\^encia \\
+        Frama-C / WP & prova dedutiva simb\'olica & contratos manuais para APIs externas & anota\c{c}\~oes ACSL e obriga\c{c}\~oes de prova & prova condicionada aos contratos \\
+        CBMC / goto-harness & BMC com SAT/SMT & harnesses e modelos de biblioteca & asserts e checagens nativas & contraexemplo limitado por unwind \\
+        \alert{\textbf{M\'etodo proposto}} & \textbf{BMC com ESBMC/Z3} & \textbf{9 modelos POSIX + rede simb\'olica} & \textbf{flags + invariantes de dom\'inio} & \textbf{garantia limitada + contraexemplo} \\
+        \bottomrule
+    \end{tabular}
 
     \vspace{0.5em}
-    \begin{tabular}{ll}
+    \small \textbf{Diferencial:} conectar modelos de rede, harnesses comparativos
+    e propriedades de dom\'inio em uma avalia\c{c}\~ao reproduz\'ivel do Mosquitto.
+
+    \vspace{0.2em}
+    \tiny S\'intese baseada nos trabalhos correlatos e documenta\c{c}\~oes discutidos no relat\'orio.
+\end{frame}
+
+% ==================================================================
+\section{Metodologia}
+
+\begin{frame}{Arquitetura do M\'etodo Proposto}
+    \centering
+    \resizebox{0.96\textwidth}{!}{%
+    \begin{tikzpicture}[
+        node distance=0.34cm,
+        flow/.style={draw=orange!75!black, rounded corners=2pt, fill=orange!7,
+            minimum height=2.15cm, text width=2.25cm, align=center,
+            inner sep=5pt, font=\small},
+        arrow/.style={-{Latex[length=2.4mm]}, very thick, draw=orange!80!black}
+    ]
+        \node[flow] (target) {\textbf{1. Alvos}\\CVEs, parsers e snapshot atual};
+        \node[flow, right=of target] (harness) {\textbf{2. Harness}\\entradas simb\'olicas e ambiente reduzido};
+        \node[flow, right=of harness] (models) {\textbf{3. Modelos POSIX}\\rede e eventos n\~ao determin\'isticos};
+        \node[flow, right=of models] (esbmc) {\textbf{4. ESBMC}\\unwind, SSA e f\'ormula SMT};
+        \node[flow, right=of esbmc] (evidence) {\textbf{5. Evid\^encias}\\resultado, contraexemplo e custo};
+
+        \draw[arrow] (target) -- (harness);
+        \draw[arrow] (harness) -- (models);
+        \draw[arrow] (models) -- (esbmc);
+        \draw[arrow] (esbmc) -- (evidence);
+    \end{tikzpicture}%
+    }
+
+    \vspace{0.65em}
+    \textbf{Fluxo de valida\c{c}\~ao e transfer\^encia}\\[0.2em]
+    vulner\'avel: \alert{FAILED} $\rightarrow$ corrigido: \textbf{SUCCESSFUL}
+    $\rightarrow$ reprodu\c{c}\~ao, PR ou divulga\c{c}\~ao respons\'avel
+\end{frame}
+
+\begin{frame}{Modelos Operacionais de Rede}
+    \textbf{Arquivo de refer\^encia:} \texttt{esbmc\_models/network\_stubs.c}
+
+    \vspace{0.4em}
+    \begin{tabular}{p{3.0cm}p{8.0cm}}
         \toprule
-        Fun\c{c}\~ao & Modelo \\
+        API & Abstra\c{c}\~ao verificada \\
         \midrule
-        \texttt{socket} & fd nondet em $[3, 63]$ \\
-        \texttt{bind}, \texttt{listen} & retornam 0 \\
-        \texttt{accept} & fd cliente nondet \\
-        \texttt{recv} & preenche buffer com bytes nondet \\
-        \texttt{send} & retorna comprimento nondet \\
-        \texttt{close} & retorna 0 \\
-        \texttt{select} \textbf{(novo)} & seta bits nondet em \texttt{fd\_set} \\
-        \texttt{poll} \textbf{(novo)} & preenche \texttt{revents} nondet \\
+        \texttt{socket}, \texttt{accept} & descritores n\~ao determin\'isticos em faixa v\'alida \\
+        \texttt{bind}, \texttt{listen}, \texttt{close} & retorno de sucesso sem simular o kernel \\
+        \texttt{recv} & bytes e comprimento n\~ao determin\'isticos \\
+        \texttt{send} & quantidade enviada n\~ao determin\'istica \\
+        \texttt{select} & qualquer subconjunto de descritores prontos \\
+        \texttt{poll} & eventos e erros n\~ao determin\'isticos \\
+        \bottomrule
+    \end{tabular}
+
+    \vspace{0.5em}
+    \begin{block}{Ideia central}
+        \texttt{recv()} transforma a rede em entrada simb\'olica controlada pelo
+        atacante, sem modelar TCP/IP.
+    \end{block}
+\end{frame}
+
+% ==================================================================
+\section{Avalia\c{c}\~ao Experimental}
+
+\begin{frame}{Avalia\c{c}\~ao: Objetivos, Benchmarks e Setup}
+    \begin{columns}[T]
+        \column{0.53\textwidth}
+        \textbf{Quest\~oes de pesquisa}
+        \begin{itemize}\small
+            \item \textbf{QP1:} detecta vulnerabilidades conhecidas?
+            \item \textbf{QP2:} preserva defeitos via rede simb\'olica?
+            \item \textbf{QP3:} qual \'e o custo computacional?
+            \item \textbf{QP4:} encontra falhas no c\'odigo atual?
+        \end{itemize}
+        \textbf{Benchmarks}
+        \begin{itemize}\small
+            \item 7 CVEs + regress\~ao CWE-193
+            \item Propriedades MQTT, integra\c{c}\~ao e achado novo
+            \item \textbf{21 execu\c{c}\~oes no total}
+        \end{itemize}
+        \column{0.43\textwidth}
+        \textbf{Setup e m\'etricas}
+        \begin{itemize}\small
+            \item ESBMC 8.3 + solver Z3
+            \item Windows 11 / Intel Core i7
+            \item \texttt{unwind} entre 4 e 32, conforme o caso
+            \item Resultado, tempo de parede e pico de mem\'oria
+        \end{itemize}
+    \end{columns}
+    \vspace{0.6em}
+    \small Logs e comandos s\~ao reproduz\'iveis em
+    \texttt{harnesses/mosquitto/}.
+\end{frame}
+
+\begin{frame}{Etapa 3: Resultados de Detec\c{c}\~ao}
+    \scriptsize
+    \begin{tabular}{p{3.2cm}p{2.7cm}cc}
+        \toprule
+        Subsistema & Checagem & Vulner\'avel & Corrigido \\
+        \midrule
+        \multicolumn{4}{l}{\textit{CVEs -- harnesses isolados}} \\
+        \texttt{remaining\_len}    & overflow       & \alert{FAIL} & -- \\
+        \texttt{connect\_memleak}  & memory leak    & \alert{FAIL} & -- \\
+        \texttt{read\_binary\_obo} & bounds         & \alert{FAIL} & -- \\
+        \texttt{acl\_bypass}       & unwind 32      & \alert{FAIL} & SUCC \\
+        \texttt{will\_properties}  & memory leak    & \alert{FAIL} & SUCC \\
+        \texttt{initial\_packet}   & unwind 4       & \alert{FAIL} & SUCC \\
+        \texttt{qos2\_dup}         & memory leak    & \alert{FAIL} & SUCC \\
+        \texttt{bridge\_remap}     & leak + unwind 16 & \alert{FAIL} & SUCC \\
+        \midrule
+        \multicolumn{4}{l}{\textit{Propriedades e integra\c{c}\~ao}} \\
+        \texttt{varint}/\texttt{max\_packet} & propriedades MQTT & -- & SUCC \\
+        \texttt{packet\_recv\_*} (2 pares) & \texttt{network\_stubs} & \alert{FAIL} & SUCC \\
+        \midrule
+        \texttt{proxy\_v2\_tlv} & asser\c{c}\~ao de dom\'inio & \alert{FAIL} & SUCC \\
         \bottomrule
     \end{tabular}
 
     \vspace{0.4em}
-    \small Os novos modelos \texttt{select}/\texttt{poll} cobrem o loop de
-    eventos do broker, antes inacess\'ivel \`a verifica\c{c}\~ao.
+    \small Todos os casos produziram o resultado esperado no limite configurado
+    (resposta \`as \textbf{QP1 e QP2}).
 \end{frame}
 
-% ==================================================================
-\section{Resultados}
-
-\begin{frame}{CVEs Cobertos (or\'aculo de valida\c{c}\~ao)}
-    \small
-    \begin{tabular}{p{1.9cm}p{3.2cm}lc}
-        \toprule
-        CVE & Tipo & CWE & Fix \\
-        \midrule
-        2017-7651 & Integer Overflow & 190 & 1.4.15 \\
-        2017-7654 & Memory Leak      & 401 & 1.4.15 \\
-        2017-7650 & ACL Bypass       & 284 & 1.4.12 \\
-        2023-3592  & Memory Leak     & 401 & 2.0.16 \\
-        2023-0809  & Excess Alloc    & 400 & 2.0.16 \\
-        2023-28366 & Memory Leak QoS2& 401 & 2.0.16 \\
-        2024-3935  & Double Free     & 415 & 2.0.19 \\
-        \bottomrule
-    \end{tabular}
-
-    \vspace{0.3em}
-    + 2 harnesses de propriedade MQTT~v5 \quad
-    + 4 harnesses de integra\c{c}\~ao via \texttt{recv()}
-\end{frame}
-
-\begin{frame}{Resultados: Detec\c{c}\~ao}
-    \scriptsize
-    \begin{tabular}{p{3.0cm}lcc}
-        \toprule
-        Subsistema & Flags & Vuln. & Fix \\
-        \midrule
-        \multicolumn{4}{l}{\textit{CVE -- isolados}} \\
-        \texttt{remaining\_len}    & uof        & \alert{FAIL} & -- \\
-        \texttt{connect\_memleak}  & mlc        & \alert{FAIL} & -- \\
-        \texttt{acl\_bypass}       & uw~32      & \alert{FAIL} & SUCC \\
-        \texttt{will\_properties}  & mlc        & \alert{FAIL} & SUCC \\
-        \texttt{initial\_packet}   & uw~4       & \alert{FAIL} & SUCC \\
-        \texttt{qos2\_dup}         & mlc        & \alert{FAIL} & SUCC \\
-        \texttt{bridge\_remap}     & mlc+uw~16  & \alert{FAIL} & SUCC \\
-        \multicolumn{4}{l}{\textit{Integra\c{c}\~ao / Propriedades}} \\
-        \texttt{pkt\_recv\_*} (2)  & net\_stubs & \alert{FAIL} & SUCC \\
-        \texttt{varint}/\texttt{max\_pkt}     & uw~8       & --           & SUCC \\
-        \multicolumn{4}{l}{\textit{Nova falha (2.1.x)}} \\
-        \texttt{proxy\_v2\_tlv}   & uof+assert & \alert{FAIL} & SUCC \\
-        \bottomrule
-    \end{tabular}
-    \vspace{0.2em}\\
-    {\tiny uof=\texttt{--unsigned-overflow-check}; mlc=\texttt{--memory-leak-check}; uw=\texttt{--unwind}; assert=\texttt{\_\_ESBMC\_assert} manual}
-\end{frame}
-
-\begin{frame}{Resultados: Desempenho (ESBMC~8.3, z3)}
+\begin{frame}{Etapa 3: Resultados de Desempenho}
     \small
     \begin{tabular}{lcrr}
         \toprule
-        Harness & Resultado & Tempo (s) & Mem.\ (MB) \\
+        Harness & Resultado & Tempo (s) & Mem. (MB) \\
         \midrule
-        \texttt{remaining\_length} (vuln.)   & \alert{FAILED}    &   1,0 &   97 \\
-        \texttt{connect\_memleak} (vuln.)    & \alert{FAILED}    &   1,5 &  166 \\
-        \texttt{acl\_bypass} (unwind 32)     & \alert{FAILED}    &  87,6 & 2220 \\
-        \texttt{acl\_bypass\_fixed}          & SUCCESSFUL        &  23,1 & 1996 \\
-        \texttt{will\_properties} (vuln.)    & \alert{FAILED}    &   1,0 &   98 \\
-        \texttt{qos2\_dup} (vuln.)           & \alert{FAILED}    &   1,3 &  119 \\
-        \texttt{bridge\_remap} (vuln.)       & \alert{FAILED}    &   1,0 &   78 \\
-        \texttt{pkt\_recv\_rem\_len} (vuln.) & \alert{FAILED}    &   0,6 &   77 \\
-        \texttt{proxy\_v2\_tlv} (vuln., 2.1.x) & \alert{FAILED} &   0,9 &   73 \\
-        \texttt{proxy\_v2\_tlv} (fixed)      & SUCCESSFUL        &   0,5 &   73 \\
-        \emph{demais harnesses}              & SUCCESSFUL        & $<4$  & $<$135 \\
+        \texttt{remaining\_length} (vuln.)   & FAILED     &   2,9 &   97 \\
+        \texttt{connect\_memleak} (vuln.)    & FAILED     &   2,8 &  167 \\
+        \texttt{read\_binary\_obo} (vuln.)   & FAILED     &   1,1 &  104 \\
+        \texttt{qos2\_dup} (fixed)           & SUCCESSFUL &  20,6 &  135 \\
+        \texttt{acl\_bypass} (vuln.)         & FAILED     & 389,3 & 2219 \\
+        \texttt{acl\_bypass} (fixed)         & SUCCESSFUL & 120,4 & 1996 \\
+        \texttt{proxy\_v2\_tlv} (vuln.)      & FAILED     &   3,7 &   95 \\
+        \texttt{proxy\_v2\_tlv} (fixed)      & SUCCESSFUL &   2,2 &   96 \\
+        \emph{demais 13 harnesses}            & esperado   & $<5,4$ & $<135$ \\
         \bottomrule
+    \end{tabular}
+
+    \vspace{0.5em}
+    \begin{block}{S\'intese}
+        \textbf{18/21} concluem em menos de 6 s e abaixo de 170 MB.
+        O \texttt{acl\_bypass} \'e o outlier por exigir \texttt{unwind 32}.
+    \end{block}
+    \footnotesize \textbf{QP3:} a abordagem \'e vi\'avel para a maioria dos
+    subsistemas isolados, mas sens\'ivel \`a profundidade de busca.
+\end{frame}
+
+% ==================================================================
+\section{Achado de Seguran\c{c}a}
+
+\begin{frame}{Falha no Snapshot \mosqversion}
+    \begin{block}{\texttt{src/proxy\_v2.c} -- \texttt{read\_tlv\_ssl} (CWE-191)}
+        Parser de sub-TLVs SSL no PROXY Protocol v2. O contador \texttt{len}
+        representa os bytes restantes dentro da SSL TLV.
+    \end{block}
+
+    \vspace{0.3em}
+    \textbf{Opera\c{c}\~ao vulner\'avel:}
+    \begin{center}
+        \texttt{len = (uint16\_t)(len - (3 + tlv\_len));}
+    \end{center}
+    sem verificar antes se \texttt{3 + tlv\_len <= len}.
+
+    \vspace{0.5em}
+    \textbf{Contraexemplo produzido pelo ESBMC:}
+    \begin{tabular}{ll}
+        \texttt{ssl\_tlv\_len = 256} & \texttt{len = 251} ap\'os o cabe\c{c}alho SSL \\
+        \texttt{tlv\_len = 253} & passa no limite do buffer global \\
+        \multicolumn{2}{l}{\texttt{3 + 253 = 256 > 251} $\Rightarrow$ \texttt{len = 65.531}} \\
     \end{tabular}
 
     \vspace{0.4em}
-    \small 19/21 harnesses concluem em $<$~4\,s e $<$~170\,MB.
-    \texttt{acl\_bypass} \'e outlier (unwind~32).
+    \footnotesize Requer \texttt{proxy\_protocol true}. Reportado ao Eclipse em
+    jun./2026 como Security Report \#551. \textbf{Resultado da QP4.}
 \end{frame}
 
-% ==================================================================
-\section{Nova Vulnerabilidade (Mosquitto 2.1.x)}
-
-\begin{frame}{Vulnerabilidade Encontrada no Mosquitto~2.1.x (1/2)}
-    \begin{block}{Falha em \texttt{src/proxy\_v2.c} -- \texttt{read\_tlv\_ssl} (CWE-191)}
-        Parser de sub-TLVs SSL no PROXY Protocol~v2.\\[0.3em]
-        \textbf{Bug:} \texttt{len = (uint16\_t)(len - (3 + tlv\_len))} executado\\sem verificar
-        \texttt{3 + tlv\_len \textbf{<=} len} antes.
-    \end{block}
-    \vspace{0.3em}
-    \textbf{Contraexemplo ESBMC ($<$1\,s):}
-    \small
-    \begin{tabular}{ll}
-        \texttt{ssl\_tlv\_len} = 256 & \texttt{len} = 251 (ap\'os 5-byte SSL header) \\
-        \texttt{tlv\_len} = 253       & \textit{passa} no buffer check ($\leq$492) \\
-        \multicolumn{2}{l}{\texttt{3+253=256 > 251} \;\textbf{$\Rightarrow$ len wraps para 65.531}}
-    \end{tabular}
-    \vspace{0.3em}\\
-    \alert{FAILED} (vuln.) \; / \; SUCCESSFUL (corre\c{c}\~ao: adicionar guarda)\\[0.2em]
-    \footnotesize Requer \texttt{proxy\_protocol~true}. Ser\'a reportado ao Eclipse (\emph{coordinated disclosure}).
-\end{frame}
-
-\begin{frame}{Vulnerabilidade Encontrada no Mosquitto~2.1.x (2/2)}
-    \begin{alertblock}{Por que nem flags autom\'aticas nem fuzzer detectaram}
+\begin{frame}{Por que o Harness Encontrou a Falha?}
+    \begin{alertblock}{Checagens autom\'aticas e fuzzing}
         \small
-        A subtra\c{c}\~ao \texttt{len - (3+tlv\_len)} ocorre em aritm\'etica \texttt{int}
-        com sinal (promo\c{c}\~ao impl\'icita do C).\\[0.3em]
-        \begin{tabular}{ll}
-            \texttt{--unsigned-overflow-check} & n\~ao acionado (opera\c{c}\~ao \'e em \texttt{int}) \\
-            \texttt{--overflow-check}          & $-4$ \'e \texttt{int} v\'alido \\
-            UBSan / fuzzer (OSS-Fuzz)          & sem \emph{crash}, comportamento definido em C \\
+        \begin{tabular}{p{4.2cm}p{6.8cm}}
+            \texttt{--unsigned-overflow-check} & a opera\c{c}\~ao ocorre como \texttt{int} por promo\c{c}\~ao \\
+            \texttt{--overflow-check} & o resultado negativo intermedi\'ario \'e v\'alido \\
+            UBSan / libFuzzer & a convers\~ao \'e definida e n\~ao produz crash \\
         \end{tabular}
     \end{alertblock}
-    \vspace{0.3em}
-    \begin{block}{Por que o ESBMC com harness detectou}
-        \small
-        O harness especifica o \textbf{invariante de dom\'{\i}nio} como asser\c{c}\~ao:\\[0.2em]
-        \texttt{\_\_ESBMC\_assert((uint32\_t)3 + tlv\_len <= (uint32\_t)len, ...)}\\[0.2em]
-        \'E exatamente esse tipo de propriedade --- n\~ao um crash ---
-        que a verifica\c{c}\~ao formal com asser\c{c}\~ao de dom\'{\i}nio consegue verificar.
+
+    \begin{block}{Propriedade de dom\'inio especificada no harness}
+        \centering
+        \texttt{\_\_ESBMC\_assert(3u + tlv\_len <= len, ...);}
     \end{block}
-    \vspace{0.2em}
-    \footnotesize Commit \texttt{23c918ee} (jan./2026): fuzzer para \texttt{proxy\_v2} adicionado. Este bug n\~ao foi encontrado pelo fuzzer.
+
+    \textbf{Corre\c{c}\~ao proposta:} rejeitar a TLV antes da subtra\c{c}\~ao se
+    seu tamanho exceder o espa\c{c}o restante.
+
+    \vspace{0.4em}
+    \small \alert{FAILED} no c\'odigo original (3,71 s) \quad/\quad
+    \textbf{SUCCESSFUL} com a guarda (2,17 s).
+
+    \vspace{0.3em}
+    \footnotesize Commit \texttt{23c918ee}: fuzzer adicionado ao subsistema em
+    jan./2026; esta falha l\'ogica n\~ao gera um or\'aculo de crash.
 \end{frame}
 
-% ==================================================================
-\section{Pr\'oximos Passos e Cronograma}
-
-\begin{frame}{Pr\'oximos Passos}
+\begin{frame}{Evid\^encias e Transfer\^encia dos Resultados}
     \begin{columns}[T]
-        \column{0.48\textwidth}
-        \textbf{Limita\c{c}\~oes atuais}
-        \begin{itemize}\small
-            \item An\'alise \emph{context-bounded}
-            \item CVE-2024-8376 ainda n\~ao modelado
-            \item APIs pendentes: \texttt{epoll\_*}, TLS/SSL
-            \item Modelos externos ao \texttt{c2goto}
-        \end{itemize}
-        \column{0.48\textwidth}
-        \textbf{A fazer}
-        \begin{enumerate}\small
-            \item Divulgar falha ao Eclipse (\emph{disclosure})
-            \item Integrar modelos ao \texttt{c2goto}
-            \item Buscar mais falhas no Mosquitto 2.1.x
-            \item Harness para CVE-2024-8376
-            \item Submeter artigo final
-        \end{enumerate}
+        \column{0.67\textwidth}
+        \textbf{Divulga\c{c}\~ao respons\'avel ao Eclipse}
+
+        \vspace{0.2em}
+        \includegraphics[width=\linewidth]{Screenshot 2026-06-29 160341.png}
+
+        \vspace{0.2em}
+        \scriptsize Security Report \#551: snapshot confirmado,
+        configura\c{c}\~ao afetada e descri\c{c}\~ao t\'ecnica.
+
+        \column{0.30\textwidth}
+        \textbf{Contribui\c{c}\~ao upstream}
+
+        \vspace{0.8em}
+        \includegraphics[width=\linewidth]{Screenshot 2026-06-29 160658.png}
+
+        \vspace{0.5em}
+        \scriptsize PR \#5388: modelos POSIX de
+        \texttt{socket}, \texttt{select} e \texttt{poll} incorporados ao ESBMC.
     \end{columns}
 \end{frame}
 
-\begin{frame}{Cronograma do trabalho}
-    \small
-    \begin{tabular}{clcc}
-        \toprule
-        \# & Atividade & Per\'iodo & Status \\
-        \midrule
-        1 & Pesquisa bibliogr\'afica e CVEs       & Mar--Abr/26 & \checkmark \\
-        2 & Harnesses isolados                    & Mar--Mai/26 & \checkmark \\
-        3 & Operational models (socket/recv/send) & Abr--Mai/26 & \checkmark \\
-        4 & Modelos select/poll + integra\c{c}\~ao     & Mai/26      & \checkmark \\
-        5 & Experimentos e m\'etricas              & Mai--Jun/26 & \checkmark \\
-        6 & Defesa intermedi\'aria                 & Jun/26      & \textbf{agora} \\
-        7 & Integra\c{c}\~ao c2goto + defesa final     & Jul/26      & pendente \\
-        \bottomrule
-    \end{tabular}
+% ==================================================================
+\section{Amea\c{c}as \`a Validade}
+
+\begin{frame}{Contribui\c{c}\~oes e Amea\c{c}as \`a Validade}
+    \begin{columns}[T]
+        \column{0.48\textwidth}
+        \textbf{Contribui\c{c}\~oes}
+        \begin{itemize}\small
+            \item Arquitetura de verifica\c{c}\~ao para software de rede
+            \item 9 modelos POSIX e 21 harnesses reproduz\'iveis
+            \item Valida\c{c}\~ao em CVEs e rede simb\'olica
+            \item PR \#5388 e Security Report \#551
+        \end{itemize}
+        \column{0.48\textwidth}
+        \textbf{Amea\c{c}as principais}
+        \begin{itemize}\small
+            \item Harnesses reduzem o contexto do broker
+            \item Garantias dependem de \texttt{unwind}, hip\'oteses e asserts
+            \item Um broker e um subconjunto de CVEs/APIs
+            \item Desempenho medido em uma \'unica m\'aquina
+        \end{itemize}
+    \end{columns}
+    \vspace{0.5em}
+    \small \textbf{Mitiga\c{c}\~ao:} pares vuln./fix, casos via \texttt{recv()} e
+    comandos, fontes e logs versionados.
 \end{frame}
 
 % ==================================================================
+\section{Conclus\~ao}
+
+\begin{frame}{Conclus\~ao}
+    \begin{enumerate}
+        \item Modelos operacionais tornam entradas de rede acess\'iveis ao ESBMC
+        \item A metodologia reproduziu CVEs e distinguiu variantes corrigidas
+        \item O custo foi baixo na maioria dos harnesses: \textbf{18/21 em $<6$ s}
+        \item Uma asser\c{c}\~ao de dom\'inio revelou uma falha que n\~ao causa crash
+    \end{enumerate}
+
+    \vspace{0.8em}
+    \textbf{\alert{Resposta \`a pergunta de pesquisa}}\\[0.2em]
+    Modelos POSIX e harnesses simb\'olicos permitem verificar propriedades
+    de brokers MQTT sem simular a pilha de rede.
+\end{frame}
+
 \begin{frame}[standout]
     Obrigado.
 
     \vspace{0.8em}
     \small Reposit\'orio: \texttt{harnesses/mosquitto/} \quad
-    Logs: \texttt{*.log} \quad
     Modelos: \texttt{esbmc\_models/}
 \end{frame}
 
